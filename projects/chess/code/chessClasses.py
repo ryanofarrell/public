@@ -1,6 +1,6 @@
 # %% Imports
 from typing import List
-import numpy as np
+import pandas as pd
 
 
 # %% Constants
@@ -8,10 +8,24 @@ FILES = ["a", "b", "c", "d", "e", "f", "g", "h"]
 RANKS = ["1", "2", "3", "4", "5", "6", "7", "8"]
 SQUARES = [f + r for f in FILES for r in RANKS]
 
-
+# %% Lower-level classes
 class MoveError(Exception):
     "Generic error for move errors"
     pass
+
+
+class empty(object):
+    "Empty square of board"
+
+    def __init__(self):
+        pass
+
+    def __repr__(self) -> str:
+        return "  "
+
+
+def isPiece(p):
+    return p != empty
 
 
 def getRelativeLoc(color: str, loc: str, addRank: int, addFile: int) -> str:
@@ -118,7 +132,6 @@ def isInCheck(board: dict, color: str) -> bool:
     otherColor = getOtherColor(color)
     # Get piece location from
     for p in board:
-        # print(self.board[p])
         if str(board[p]) == color + "K":
             k = p
 
@@ -147,8 +160,9 @@ def isInCheck(board: dict, color: str) -> bool:
             elif str(board[s])[0] == color:
                 break
             elif str(board[s]) in [otherColor + "Q", otherColor + "B"]:
-                print("here")
                 return True
+            else:
+                break
 
     # Check that closest straight line piece isn't rook or Queen
     straights = [
@@ -164,6 +178,246 @@ def isInCheck(board: dict, color: str) -> bool:
                 break
             elif str(board[s]) in [otherColor + "Q", otherColor + "R"]:
                 return True
+            else:
+                break
+
+
+def getPotentialValidMoves(board, currSquare, prevMoves):
+    "Returns all moves for a piece REGARDLESS of if they leave the moving color in check"
+
+    movingPiece = board[currSquare]
+    movingColor = movingPiece.color
+    diagonals = [
+        getLineFrom(
+            color=movingColor,
+            loc=currSquare,
+            rankIncrement=i,
+            fileIncrement=j,
+        )
+        for i in [-1, 1]
+        for j in [-1, 1]
+    ]
+    straights = [
+        getLineFrom(
+            color=movingColor,
+            loc=currSquare,
+            rankIncrement=i * mult,
+            fileIncrement=j * mult,
+        )
+        for i, j in zip([0, 1], [1, 0])
+        for mult in [-1, 1]
+    ]
+    move = {"piece": str(movingPiece), "oldSquare": currSquare, "special": None}
+
+    # King squares
+    potentialValidMoves = []
+    if movingPiece.name == "K":
+        for i in [-1, 0, 1]:
+            for j in [-1, 0, 1]:
+                newLoc = getRelativeLoc(
+                    color=movingColor, loc=currSquare, addRank=i, addFile=j
+                )
+            if newLoc not in SQUARES:
+                continue
+            if newLoc == currSquare:
+                continue
+            if str(board[newLoc])[0] == movingColor:
+                continue
+            potentialValidMoves.append({**move, "newSquare": newLoc})
+
+        # Short castling - if h-file rook has 0 moves, king has 0 moves, squares between are empty
+        if movingPiece.moveCnt != 0:
+            pass
+
+        elif str(board[getRelativeLoc("w", currSquare, 0, 3)]) != movingColor + "R":
+            pass
+        elif board[getRelativeLoc("w", currSquare, 0, 3)].moveCnt != 0:
+            pass
+        elif str(board[getRelativeLoc("w", currSquare, 0, 1)]) != "  ":
+            pass
+        elif str(board[getRelativeLoc("w", currSquare, 0, 2)]) != "  ":
+            pass
+        else:
+            potentialValidMoves.append(
+                {
+                    **move,
+                    "newSquare": getRelativeLoc("w", currSquare, 0, 2),
+                    "special": "shortCastle",
+                }
+            )
+
+        # long castling - if a-file rook has 0 moves, king has 0 moves, squares between are empty
+        if movingPiece.moveCnt != 0:
+            pass
+        elif str(board[getRelativeLoc("w", currSquare, 0, -4)]) != movingColor + "R":
+            pass
+        elif board[getRelativeLoc("w", currSquare, 0, -4)].moveCnt != 0:
+            pass
+        elif str(board[getRelativeLoc("w", currSquare, 0, -1)]) != "  ":
+            pass
+        elif str(board[getRelativeLoc("w", currSquare, 0, -2)]) != "  ":
+            pass
+        elif str(board[getRelativeLoc("w", currSquare, 0, -3)]) != "  ":
+            pass
+        else:
+            potentialValidMoves.append(
+                {
+                    **move,
+                    "newSquare": getRelativeLoc("w", currSquare, 0, -2),
+                    "special": "longCastle",
+                }
+            )
+
+    # Queen squares
+    if movingPiece.name == "Q":
+        for line in straights + diagonals:
+            for s in line:
+                currOccupant = board[s]
+                if str(currOccupant) == "  ":
+                    potentialValidMoves.append({**move, "newSquare": s})
+                elif currOccupant.color == movingColor:
+                    break
+                else:
+                    potentialValidMoves.append({**move, "newSquare": s})
+                    break
+
+    # Rook squares
+    if movingPiece.name == "R":
+        for line in straights:
+            for s in line:
+                currOccupant = board[s]
+                if str(currOccupant) == "  ":
+                    potentialValidMoves.append({**move, "newSquare": s})
+                elif currOccupant.color == movingColor:
+                    break
+                else:
+                    potentialValidMoves.append({**move, "newSquare": s})
+                    break
+
+    # Bishop squares
+    if movingPiece.name == "B":
+        for line in diagonals:
+            for s in line:
+                currOccupant = board[s]
+                if str(currOccupant) == "  ":
+                    potentialValidMoves.append({**move, "newSquare": s})
+                elif currOccupant.color == movingColor:
+                    break
+                else:
+                    potentialValidMoves.append({**move, "newSquare": s})
+                    break
+
+    # Knight squares
+    if movingPiece.name == "N":
+        for s in getKnightAttackSquares(currSquare):
+            currOccupant = board[s]
+            if str(currOccupant) == "  ":
+                potentialValidMoves.append({**move, "newSquare": s})
+            elif currOccupant.color != movingColor:
+                potentialValidMoves.append({**move, "newSquare": s})
+
+    # Pawn squares
+    if movingPiece.name == "P":
+        # if 1 square ahead is empty, that is allowed, check two ahead
+        oneAhead = getRelativeLoc(movingColor, currSquare, 1, 0)
+        if str(board[oneAhead]) == "  ":
+            potentialValidMoves.append({**move, "newSquare": oneAhead})
+
+            # If piece move count == 0 then two ahead is allowed if its not a piece
+            twoAhead = getRelativeLoc(movingColor, currSquare, 2, 0)
+            if movingPiece.moveCnt == 0:
+                if str(board[twoAhead]) == "  ":
+                    potentialValidMoves.append({**move, "newSquare": twoAhead})
+
+        # Takes one rank and +/1 1 file
+        takeSquares = [
+            getRelativeLoc(movingColor, currSquare, 1, fileOffset)
+            for fileOffset in [-1, 1]
+            if getRelativeLoc(movingColor, currSquare, 1, fileOffset) in board.keys()
+        ]
+        for takeSquare in takeSquares:
+            if str(board[takeSquare]) != "  ":
+                if board[takeSquare].color != movingColor:
+                    potentialValidMoves.append({**move, "newSquare": takeSquare})
+        # en passant logic
+        # If prevmove was two squares forward and one square back was takeable is square in takeSquares?
+        if len(prevMoves) == 0:  # first move can't be en passant
+            pass
+        else:
+            prevMove = prevMoves[-1]
+            otherColor = getOtherColor(movingColor)
+            prevMoveOneSquareBack = getRelativeLoc(
+                otherColor, prevMove["newSquare"], -1, 0
+            )
+            if prevMove["piece"] != otherColor + "P":  # If prevmove not pawn
+                pass
+            elif (
+                int(prevMove["newSquare"][1]) - int(prevMove["oldSquare"][1]) != 2
+            ):  # prevmove wasnt two squares
+                pass
+            elif prevMoveOneSquareBack not in takeSquares:  # Wasn't take opp
+                pass
+            else:
+                potentialValidMoves.append(
+                    {**move, "newSquare": prevMoveOneSquareBack, "special": "enpassant"}
+                )
+
+    return potentialValidMoves
+
+
+def getNewBoard(board: dict, move: dict) -> dict:
+    "Returns what the new board would look like after move is executed"
+    newBoard = board.copy()
+
+    movingPiece = board[move["oldSquare"]]
+    movingColor = movingPiece.color
+
+    if move["piece"] != str(movingPiece):
+        raise MoveError(
+            f"Square {move['oldSquare']} does not have piece {move['piece']}"
+        )
+    newBoard[move["newSquare"]] = movingPiece
+    newBoard[move["oldSquare"]] = empty()
+
+    if move["special"] == "enpassant":
+        newBoard[getRelativeLoc(movingColor, move["newSquare"], -1, 0)] = empty()
+    if move["special"] == "shortCastle":
+        newBoard[getRelativeLoc("w", move["newSquare"], 0, -1)] = newBoard[
+            getRelativeLoc("w", move["newSquare"], 0, 1)
+        ]
+        newBoard[getRelativeLoc("w", move["newSquare"], 0, 1)] = empty()
+    if move["special"] == "longCastle":
+        newBoard[getRelativeLoc("w", move["newSquare"], 0, 1)] = newBoard[
+            getRelativeLoc("w", move["newSquare"], 0, -2)
+        ]
+        newBoard[getRelativeLoc("w", move["newSquare"], 0, -2)] = empty()
+
+    return newBoard
+
+
+def getValidMoves(board: dict, color: str, prevMoves: List[dict]) -> list:
+    "Gets all valid moves for a specific color. If list length = 0, checkmate!"
+    potentialValidMoves = []
+    validMoves = []
+    for currSquare in board:
+        if str(board[currSquare]) == "  ":
+            continue
+
+        movingPiece = board[currSquare]
+        if str(movingPiece)[0] != color:
+            continue
+        print(movingPiece, currSquare)
+
+        potentialValidMoves += getPotentialValidMoves(board, currSquare, prevMoves)
+    print("potentialValidMoves")
+    print(potentialValidMoves)
+    for move in potentialValidMoves:
+        if isInCheck(getNewBoard(board, move), color):
+            continue
+
+        validMoves.append(move)
+
+    return validMoves
 
 
 # %% Chess game class
@@ -175,7 +429,7 @@ class chessGame(object):
         self.board = {}
         for f in FILES:
             for r in RANKS:
-                self.board[f + r] = self.empty()
+                self.board[f + r] = empty()
         for r, color in (["1", "w"], ["8", "b"]):
             for _ in ["a" + r, "h" + r]:
                 self.board[_] = self.piece(color, "R")
@@ -330,7 +584,6 @@ class chessGame(object):
             if movingPiece.name == "N":
                 for s in getKnightAttackSquares(oldSquare):
                     currOccupant = self.board[s]
-                    print(currOccupant)
                     if not self._isPiece(currOccupant):
                         validSquares.append(s)
                     elif currOccupant.color != self._toMove:
@@ -366,12 +619,13 @@ class chessGame(object):
                     prevMove = self._moves[-1]
                     otherColor = getOtherColor(self._toMove)
                     prevMoveOneSquareBack = getRelativeLoc(
-                        otherColor, prevMove[-1], -1, 0
+                        otherColor, prevMove["newSquare"], -1, 0
                     )
-                    if prevMove[0] != otherColor + "P":  # If prevmove not pawn
+                    if prevMove["piece"] != otherColor + "P":  # If prevmove not pawn
                         pass
                     elif (
-                        int(prevMove[-2][1]) - int(prevMove[-1][1]) != 2
+                        int(prevMove["newSquare"][1]) - int(prevMove["oldSquare"][1])
+                        != 2
                     ):  # prevmove wasnt two
                         pass
                     elif prevMoveOneSquareBack not in takeSquares:  # Wasn't take opp
@@ -398,20 +652,20 @@ class chessGame(object):
         # Remove from from, place in to
         newBoard = self.board.copy()
         newBoard[newSquare] = movingPiece
-        newBoard[oldSquare] = self.empty()
+        newBoard[oldSquare] = empty()
 
         if special == "enpassant":
-            newBoard[getRelativeLoc(self._toMove, newSquare, -1, 0)] = self.empty()
+            newBoard[getRelativeLoc(self._toMove, newSquare, -1, 0)] = empty()
         if special == "shortCastle":
             newBoard[getRelativeLoc("w", newSquare, 0, -1)] = newBoard[
                 getRelativeLoc("w", newSquare, 0, 1)
             ]
-            newBoard[getRelativeLoc("w", newSquare, 0, 1)] = self.empty()
+            newBoard[getRelativeLoc("w", newSquare, 0, 1)] = empty()
         if special == "longCastle":
             newBoard[getRelativeLoc("w", newSquare, 0, 1)] = newBoard[
                 getRelativeLoc("w", newSquare, 0, -2)
             ]
-            newBoard[getRelativeLoc("w", newSquare, 0, -2)] = self.empty()
+            newBoard[getRelativeLoc("w", newSquare, 0, -2)] = empty()
 
         # Move is invalid if it results in moving color being in check
         if isInCheck(board=newBoard, color=self._toMove):
@@ -420,7 +674,14 @@ class chessGame(object):
         self.board = newBoard
         self._changeTurn()
         newBoard[newSquare].moveCnt += 1
-        self._moves.append((str(movingPiece), oldSquare, newSquare))
+        self._moves.append(
+            {
+                "piece": str(movingPiece),
+                "oldSquare": oldSquare,
+                "newSquare": newSquare,
+                "special": special,
+            }
+        )
 
     class piece(object):
         def __init__(self, color, name):
@@ -435,13 +696,6 @@ class chessGame(object):
 
         def getLegalMoves(self, loc, board):
             print(f"Getting legal moves for {self}")
-
-    class empty(object):
-        def __init__(self):
-            pass
-
-        def __repr__(self) -> str:
-            return "  "
 
     def __repr__(self):
         out = ""
@@ -460,6 +714,7 @@ class chessGame(object):
 # %% Main
 if __name__ == "__main__":
     game = chessGame()
+
     # print(game)
     game.move("e2", "e4")
     game.move("d7", "d5")
@@ -467,12 +722,13 @@ if __name__ == "__main__":
     game.move("b8", "c6")
     game.move("f1", "b5")
     game.move("c8", "d7")
-    game.move("e1", "g1")
-    game.move("d7", "f5")
-    game.move("e4", "f5")
-    game.move("d8", "d7")
-    game.move("f3", "d4")
-    game.move("e8", "c8")
+    moves = pd.DataFrame(getValidMoves(game.board, game._toMove, game._moves))
+    # game.move("e1", "g1")
+    # game.move("d7", "f5")
+    # game.move("e4", "f5")
+    # game.move("d8", "d7")
+    # game.move("f3", "d4")
+    # game.move("e8", "c8")
     # game.move("e7", "f6")
     # game.move("f1", "c4")
 
@@ -481,6 +737,6 @@ if __name__ == "__main__":
     # print(game)
     # game.move("c8", "d7")
     print(game)
-    print(game._moves)
+    # print(game._moves)
 
 # %%
