@@ -144,7 +144,10 @@ def isInCheck(board: dict, color: str) -> bool:
         for s in diag:
             if str(board[s]) == "  ":
                 pass
-            if str(board[s]) in [otherColor + "Q", otherColor + "B"]:
+            elif str(board[s])[0] == color:
+                break
+            elif str(board[s]) in [otherColor + "Q", otherColor + "B"]:
+                print("here")
                 return True
 
     # Check that closest straight line piece isn't rook or Queen
@@ -157,7 +160,9 @@ def isInCheck(board: dict, color: str) -> bool:
         for s in straight:
             if str(board[s]) == "  ":
                 pass
-            if str(board[s]) in [otherColor + "Q", otherColor + "R"]:
+            elif str(board[s])[0] == color:
+                break
+            elif str(board[s]) in [otherColor + "Q", otherColor + "R"]:
                 return True
 
 
@@ -206,12 +211,11 @@ class chessGame(object):
         movingPiece = self.board[oldSquare]
 
         def _getValidMoves():
-            isEnPassant = False
-            print(f"Getting valid moves for {movingPiece}")
+            special = None
             diagonals = [
                 getLineFrom(
                     color=movingPiece.color,
-                    loc=old,
+                    loc=oldSquare,
                     rankIncrement=i,
                     fileIncrement=j,
                 )
@@ -221,7 +225,7 @@ class chessGame(object):
             straights = [
                 getLineFrom(
                     color=movingPiece.color,
-                    loc=old,
+                    loc=oldSquare,
                     rankIncrement=i * mult,
                     fileIncrement=j * mult,
                 )
@@ -230,21 +234,58 @@ class chessGame(object):
             ]
 
             # King squares
-            # TODO castling!
             validSquares = []
             if movingPiece.name == "K":
                 for i in [-1, 0, 1]:
                     for j in [-1, 0, 1]:
                         newLoc = getRelativeLoc(
-                            color=movingPiece.color, loc=old, addRank=i, addFile=j
+                            color=movingPiece.color, loc=oldSquare, addRank=i, addFile=j
                         )
                     if newLoc not in SQUARES:
                         continue
-                    if newLoc == old:
+                    if newLoc == oldSquare:
                         continue
                     if str(self.board[newLoc])[0] == self._toMove:
                         continue
                     validSquares.append(newLoc)
+
+                # Short castling - if h-file rook has 0 moves, king has 0 moves, squares between are empty
+                if (
+                    str(self.board[getRelativeLoc("w", oldSquare, 0, 3)])
+                    != movingPiece.color + "R"
+                ):
+                    pass
+                if self.board[getRelativeLoc("w", oldSquare, 0, 3)].moveCnt != 0:
+                    pass
+                elif movingPiece.moveCnt != 0:
+                    pass
+                elif self._isPiece(self.board[getRelativeLoc("w", oldSquare, 0, 1)]):
+                    pass
+                elif self._isPiece(self.board[getRelativeLoc("w", oldSquare, 0, 2)]):
+                    pass
+                else:
+                    validSquares.append(getRelativeLoc("w", oldSquare, 0, 2))
+                    special = "shortCastle"
+
+                # long castling - if a-file rook has 0 moves, king has 0 moves, squares between are empty
+                if (
+                    str(self.board[getRelativeLoc("w", oldSquare, 0, -4)])
+                    != movingPiece.color + "R"
+                ):
+                    pass
+                if self.board[getRelativeLoc("w", oldSquare, 0, -4)].moveCnt != 0:
+                    pass
+                elif movingPiece.moveCnt != 0:
+                    pass
+                elif self._isPiece(self.board[getRelativeLoc("w", oldSquare, 0, -1)]):
+                    pass
+                elif self._isPiece(self.board[getRelativeLoc("w", oldSquare, 0, -2)]):
+                    pass
+                elif self._isPiece(self.board[getRelativeLoc("w", oldSquare, 0, -3)]):
+                    pass
+                else:
+                    validSquares.append(getRelativeLoc("w", oldSquare, 0, -2))
+                    special = "longCastle"
 
             # Queen squares
             if movingPiece.name == "Q":
@@ -287,7 +328,7 @@ class chessGame(object):
 
             # Knight squares
             if movingPiece.name == "N":
-                for s in getKnightAttackSquares(old):
+                for s in getKnightAttackSquares(oldSquare):
                     currOccupant = self.board[s]
                     print(currOccupant)
                     if not self._isPiece(currOccupant):
@@ -298,19 +339,19 @@ class chessGame(object):
             # Pawn squares
             if movingPiece.name == "P":
                 # if 1 square ahead is empty, that is allowed, check two ahead
-                oneAhead = getRelativeLoc(movingPiece.color, old, 1, 0)
+                oneAhead = getRelativeLoc(movingPiece.color, oldSquare, 1, 0)
                 if not self._isPiece(oneAhead):
                     validSquares.append(oneAhead)
 
                     # If piece move count == 0 then two ahead is allowed if its not a piece
-                    twoAhead = getRelativeLoc(movingPiece.color, old, 2, 0)
+                    twoAhead = getRelativeLoc(movingPiece.color, oldSquare, 2, 0)
                     if movingPiece.moveCnt == 0:
                         if not self._isPiece(twoAhead):
                             validSquares.append(twoAhead)
 
                 # Takes one rank and +/1 1 file
                 takeSquares = [
-                    getRelativeLoc(self._toMove, old, 1, fileOffset)
+                    getRelativeLoc(self._toMove, oldSquare, 1, fileOffset)
                     for fileOffset in [-1, 1]
                 ]
                 for takeSquare in takeSquares:
@@ -337,9 +378,9 @@ class chessGame(object):
                         pass
                     else:
                         validSquares.append(prevMoveOneSquareBack)
-                        isEnPassant = True
+                        special = "enpassant"
 
-            return validSquares, isEnPassant
+            return validSquares, special
 
         # Ensure we are only moving pieces
         if not self._isPiece(itm=movingPiece):
@@ -351,7 +392,7 @@ class chessGame(object):
         print(f"Moving {movingPiece} from {oldSquare}->{newSquare}")
 
         # Get valid moves, ensure this move is in list
-        validSquares, isEnPassant = _getValidMoves()
+        validSquares, special = _getValidMoves()
         print(validSquares)
 
         # Remove from from, place in to
@@ -359,8 +400,18 @@ class chessGame(object):
         newBoard[newSquare] = movingPiece
         newBoard[oldSquare] = self.empty()
 
-        if isEnPassant:
+        if special == "enpassant":
             newBoard[getRelativeLoc(self._toMove, newSquare, -1, 0)] = self.empty()
+        if special == "shortCastle":
+            newBoard[getRelativeLoc("w", newSquare, 0, -1)] = newBoard[
+                getRelativeLoc("w", newSquare, 0, 1)
+            ]
+            newBoard[getRelativeLoc("w", newSquare, 0, 1)] = self.empty()
+        if special == "longCastle":
+            newBoard[getRelativeLoc("w", newSquare, 0, 1)] = newBoard[
+                getRelativeLoc("w", newSquare, 0, -2)
+            ]
+            newBoard[getRelativeLoc("w", newSquare, 0, -2)] = self.empty()
 
         # Move is invalid if it results in moving color being in check
         if isInCheck(board=newBoard, color=self._toMove):
@@ -412,11 +463,18 @@ if __name__ == "__main__":
     # print(game)
     game.move("e2", "e4")
     game.move("d7", "d5")
-    game.move("e4", "e5")
-    game.move("f7", "f5")
-    game.move("e5", "f6")
-    game.move("e7", "f6")
-    game.move("f1", "c4")
+    game.move("g1", "f3")
+    game.move("b8", "c6")
+    game.move("f1", "b5")
+    game.move("c8", "d7")
+    game.move("e1", "g1")
+    game.move("d7", "f5")
+    game.move("e4", "f5")
+    game.move("d8", "d7")
+    game.move("f3", "d4")
+    game.move("e8", "c8")
+    # game.move("e7", "f6")
+    # game.move("f1", "c4")
 
     # game.move("g8", "g6")
     # game.move("e5", "e4")
