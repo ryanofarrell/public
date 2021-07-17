@@ -1,1 +1,1 @@
-from .test import testFunction
+from .misc import *
