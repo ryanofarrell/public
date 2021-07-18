@@ -1,7 +1,8 @@
 # %% Imports
 from typing import List
 import pandas as pd
-
+import numpy as np
+from helpers import getRelativeFp
 
 # %% Constants
 FILES = ["a", "b", "c", "d", "e", "f", "g", "h"]
@@ -239,13 +240,13 @@ def getPotentialValidMoves(board, currSquare, prevMoves):
                 newLoc = getRelativeLoc(
                     color=movingColor, loc=currSquare, addRank=i, addFile=j
                 )
-            if newLoc not in SQUARES:
-                continue
-            if newLoc == currSquare:
-                continue
-            if str(board[newLoc])[0] == movingColor:
-                continue
-            potentialValidMoves.append({**move, "newSquare": newLoc})
+                if newLoc not in SQUARES:
+                    continue
+                if newLoc == currSquare:
+                    continue
+                if str(board[newLoc])[0] == movingColor:
+                    continue
+                potentialValidMoves.append({**move, "newSquare": newLoc})
 
         # Short castling - if h-file rook has 0 moves, king has 0 moves, squares between are empty
         if movingPiece.moveCnt != 0:
@@ -496,7 +497,6 @@ class chessGame(object):
         # Only move if its your turn
         if movingPiece.color != self._toMove:
             raise MoveError(f"It is {self._toMove} turn")
-        print(f"Moving {movingPiece} from {oldSquare}->{newSquare}")
 
         # Get valid moves, ensure this move is in list
         validMoves = getValidMoves(self.board, self._toMove, self._moves)
@@ -530,15 +530,79 @@ class chessGame(object):
         return out
 
 
+# %% Transcribe game into engine
+def findMove(move, validMoves):
+    "Gets the move from list of validMoves"
+
+    matches = []
+    for validMove in validMoves:
+        if all([move[f] == validMove[f] for f in ["piece", "newSquare"]]):
+            matches.append(validMove)
+
+    if len(matches) == 1:
+        return matches[0]
+    elif len(matches) > 1:
+        matches = [m for m in matches if m["oldSquare"][0] == move["oldFile"]]
+        if len(matches) == 1:
+            return matches[0]
+        else:
+
+            raise MoveError(f"More than one match found for {move['move']}")
+    else:
+        raise MoveError(f"No matching move for {move['move']}")
+
+
+def movesIntoGame(movesStr):
+    moves = movesStr.split(" ")
+    moveDf = pd.DataFrame(
+        {"move": moves, "color": np.tile(["w", "b"], len(moves))[: len(moves)]}
+    )
+    moveDf[["piece", "oldFile", "take", "newSquare", "check", "mate"]] = moveDf[
+        "move"
+    ].str.extract(r"([RBNKQ]{1})?([a-h])?(x)?([a-h][0-8])(\+)?(\#)?")
+
+    # Handle castle notation
+    moveDf.loc[moveDf["move"].str[:3] == "O-O", "piece"] = "K"
+    moveDf.loc[(moveDf["move"] == "O-O") & (moveDf["color"] == "w"), "newSquare"] = "g1"
+    moveDf.loc[(moveDf["move"] == "O-O") & (moveDf["color"] == "b"), "newSquare"] = "g8"
+    moveDf.loc[
+        (moveDf["move"] == "O-O-O") & (moveDf["color"] == "w"), "newSquare"
+    ] = "c1"
+    moveDf.loc[
+        (moveDf["move"] == "O-O-O") & (moveDf["color"] == "b"), "newSquare"
+    ] = "c8"
+
+    # Get piece name
+    moveDf["piece"] = moveDf["color"] + moveDf["piece"].fillna("P")
+
+    # Create game, iterate through moves
+    game = chessGame()
+    for _, move in moveDf.iterrows():
+        try:
+            validMoves = getValidMoves(game.board, game._toMove, game._moves)
+            validMove = findMove(move, validMoves)
+            # print(f"equivalent move to {move['move']} is {validMove}")
+            game.move(validMove["oldSquare"], validMove["newSquare"])
+        except MoveError:
+            print(move["move"])
+            print(game)
+            break
+
+    # TODO pawn conversions
+    print(game)
+
+
 # %% Main
 if __name__ == "__main__":
+    df = pd.read_csv(getRelativeFp(__file__, "../data/input/games.csv"))
+    movesStr = df.iloc[5422]["moves"]
     game = chessGame()
 
     # print(game)
     game.move("e2", "e4")
     game.move("f7", "f6")
     game.move("d2", "d4")
-    # game.move("g7", "g5")
+    game.move("g7", "g5")
     # game.move("d1", "h5")
     moves = pd.DataFrame(getValidMoves(game.board, game._toMove, game._moves))
     # game.move("c8", "d7")
