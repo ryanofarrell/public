@@ -440,7 +440,7 @@ def getPotentialValidMoves(
             if prevMove["piece"] != otherColor + "P":  # If prevmove not pawn
                 pass
             elif (
-                int(prevMove["newSquare"][1]) - int(prevMove["oldSquare"][1]) != 2
+                abs(int(prevMove["newSquare"][1]) - int(prevMove["oldSquare"][1])) != 2
             ):  # prevmove wasnt two squares
                 pass
             elif prevMoveOneSquareBack not in takeSquares:  # Wasn't take opp
