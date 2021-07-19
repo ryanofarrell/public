@@ -1045,7 +1045,7 @@ if __name__ == "__main__":
     # game.move("e5", "e4")
     # print(game)
     # game.move("c8", "d7")
-    print(game)
-    # print(game._moves)
+    # print(game)
+    # print(game.prevMoves)
 
 # %%
