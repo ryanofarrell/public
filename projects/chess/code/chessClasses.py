@@ -668,7 +668,12 @@ def findMove(move, validMoves):
     if len(matches) == 1:
         return matches[0]
     elif len(matches) > 1:
-        matches = [m for m in matches if m["oldSquare"][0] == move["oldFile"]]
+        matches = [
+            m
+            for m in matches
+            if (m["oldSquare"][0] == move["oldFile"])
+            | (m["oldSquare"][1] == move["oldRank"])
+        ]
         if len(matches) == 1:
             return matches[0]
         else:
