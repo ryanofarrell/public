@@ -3,6 +3,7 @@ from typing import List, Tuple, Union
 import pandas as pd
 import numpy as np
 from helpers import getRelativeFp
+from copy import deepcopy
 
 # %% Constants
 FILES = ["a", "b", "c", "d", "e", "f", "g", "h"]
@@ -20,6 +21,7 @@ class GameError(Exception):
     pass
 
 
+# %% Objects that go into squares
 class empty(object):
     "Empty square of board"
 
@@ -33,12 +35,12 @@ class empty(object):
 class piece(object):
     "Piece square on board"
 
-    def __init__(self, color, name):
+    def __init__(self, color, name, hasMoved=False):
         assert color in ["b", "w"], "Invalid color"
         assert name in ["K", "Q", "B", "N", "R", "P"], "Invalid name"
         self.color = color
         self.name = name
-        self.moveCnt = 0
+        self.hasMoved = hasMoved
 
     def __repr__(self):
         return self.color + self.name
@@ -287,12 +289,12 @@ def getPotentialValidMoves(
                 potentialValidMoves.append({**move, "newSquare": newLoc})
 
         # Short castling - if h-file rook has 0 moves, king has 0 moves, squares between are empty
-        if movingPiece.moveCnt != 0:
+        if movingPiece.hasMoved:
             pass
 
         elif str(board[getRelativeLoc("w", currSquare, 0, 3)]) != movingColor + "R":
             pass
-        elif board[getRelativeLoc("w", currSquare, 0, 3)].moveCnt != 0:
+        elif board[getRelativeLoc("w", currSquare, 0, 3)].hasMoved:
             pass
         elif type(board[getRelativeLoc("w", currSquare, 0, 1)]) == piece:
             pass
@@ -308,11 +310,11 @@ def getPotentialValidMoves(
             )
 
         # long castling - if a-file rook has 0 moves, king has 0 moves, squares between are empty
-        if movingPiece.moveCnt != 0:
+        if movingPiece.hasMoved:
             pass
         elif str(board[getRelativeLoc("w", currSquare, 0, -4)]) != movingColor + "R":
             pass
-        elif board[getRelativeLoc("w", currSquare, 0, -4)].moveCnt != 0:
+        elif board[getRelativeLoc("w", currSquare, 0, -4)].hasMoved:
             pass
         elif type(board[getRelativeLoc("w", currSquare, 0, -1)]) == piece:
             pass
@@ -401,7 +403,7 @@ def getPotentialValidMoves(
                 potentialValidMoves.append({**move, "newSquare": oneAhead})
                 # If piece move count == 0 then two ahead is allowed if its not a piece
                 twoAhead = getRelativeLoc(movingColor, currSquare, 2, 0)
-                if movingPiece.moveCnt == 0:
+                if not movingPiece.hasMoved:
                     if type(board[twoAhead]) == empty:
                         potentialValidMoves.append({**move, "newSquare": twoAhead})
 
@@ -490,19 +492,23 @@ def getNewBoard(board: dict, move: dict) -> dict:
 
     # Promotion Logic - create new piece in location
     if move["special"] in [f"promote{p}" for p in ["Q", "N", "R", "B"]]:
-        newBoard[move["newSquare"]] = piece(movingColor, move["special"][-1])
+        newBoard[move["newSquare"]] = piece(
+            movingColor, move["special"][-1], hasMoved=True
+        )
 
     if move["special"] == "enpassant":
         newBoard[getRelativeLoc(movingColor, move["newSquare"], -1, 0)] = empty()
     if move["special"] == "shortCastle":
-        newBoard[getRelativeLoc("w", move["newSquare"], 0, -1)] = newBoard[
-            getRelativeLoc("w", move["newSquare"], 0, 1)
-        ]
+        newBoard[getRelativeLoc("w", move["newSquare"], 0, -1)] = deepcopy(
+            newBoard[getRelativeLoc("w", move["newSquare"], 0, 1)]
+        )
+        newBoard[getRelativeLoc("w", move["newSquare"], 0, -1)].hasMoved = True
         newBoard[getRelativeLoc("w", move["newSquare"], 0, 1)] = empty()
     if move["special"] == "longCastle":
-        newBoard[getRelativeLoc("w", move["newSquare"], 0, 1)] = newBoard[
-            getRelativeLoc("w", move["newSquare"], 0, -2)
-        ]
+        newBoard[getRelativeLoc("w", move["newSquare"], 0, 1)] = deepcopy(
+            newBoard[getRelativeLoc("w", move["newSquare"], 0, -2)]
+        )
+        newBoard[getRelativeLoc("w", move["newSquare"], 0, 1)].hasMoved = True
         newBoard[getRelativeLoc("w", move["newSquare"], 0, -2)] = empty()
 
     return newBoard
@@ -640,6 +646,7 @@ class chessGame(object):
         self._changeTurn()
         self._moves.append(foundMove)
         self.board[newSquare].moveCnt += 1
+        self.board[newSquare].hasMoved = True
         self.validMoves, self.validBoards = getValidMoves(
             self.board, self._toMove, self._moves
         )
