@@ -480,7 +480,8 @@ def getNewBoard(board: dict, move: dict) -> dict:
         raise MoveError("Specified move does not have all required elements")
 
     newBoard = board.copy()
-    movingPiece = board[move["oldSquare"]]
+    movingPiece = deepcopy(board[move["oldSquare"]])
+    movingPiece.hasMoved = True
     movingColor = movingPiece.color
 
     if move["piece"] != str(movingPiece):
