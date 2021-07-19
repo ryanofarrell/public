@@ -838,9 +838,25 @@ def findMove(move: pd.Series, validMoves: List[dict]):
         ]
         if len(matches) == 1:
             return matches[0]
-        else:
+        elif len(matches) == 0:
+            raise MoveError(f"No matches after looking for matching rank or file")
 
-            raise MoveError(f"More than one match found for {move['move']}")
+        else:  # If we have more than 1 match still
+            # Look for matching rank AND file
+            matches = [
+                m
+                for m in matches
+                if (m["oldSquare"] == move["oldFile"] + move["oldRank"])
+            ]
+            if len(matches) == 1:
+                return matches[0]
+            elif len(matches) == 0:
+                raise MoveError(
+                    f"No matches after looking for matching rank and/or file"
+                )
+
+            else:
+                raise MoveError(f"More than one match found for {move['move']}")
     else:
         raise MoveError(f"No matching move for {move['move']}")
 
