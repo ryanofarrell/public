@@ -264,6 +264,42 @@ def getKnightAttackSquares(loc: str) -> List[str]:
     return out
 
 
+def getSquareDict() -> dict:
+    squareDict = {}
+    for square in SQUARES:
+        straights = [
+            getLineFrom(
+                color="w",
+                loc=square,
+                rankIncrement=i * mult,
+                fileIncrement=j * mult,
+            )
+            for i, j in zip([0, 1], [1, 0])
+            for mult in [-1, 1]
+        ]
+        diagonals = [
+            getLineFrom(
+                color="w",
+                loc=square,
+                rankIncrement=i,
+                fileIncrement=j,
+            )
+            for i in [-1, 1]
+            for j in [-1, 1]
+        ]
+        squareDict[square] = {
+            "straights": [s for s in straights if len(s) > 0],
+            "diagonals": [d for d in diagonals if len(d) > 0],
+            "knights": getKnightAttackSquares(square),
+        }
+
+    return squareDict
+
+
+SQUAREDICT = getSquareDict()
+
+
+# %% More complex functions
 def isInCheck(board: dict, color: str) -> bool:
     """Given a board layout, returns if specified color is in check
 
@@ -277,6 +313,8 @@ def isInCheck(board: dict, color: str) -> bool:
 
         bool -- is color in check in board?
     """
+    global SQUAREDICT
+
     # Get king square
     otherColor = getOtherColor(color)
     k = getKingSquare(board, color)
@@ -292,13 +330,13 @@ def isInCheck(board: dict, color: str) -> bool:
             return True
 
     # Knights being 2,1 or 1,2 +/- on both away means check
-    knightAttackSquares = getKnightAttackSquares(k)
+    knightAttackSquares = SQUAREDICT[k]["knights"]
     for s in knightAttackSquares:
         if str(board[s]) == otherColor + "N":
             return True
 
     # Check that closest diagonal piece isn't bishop or Queen or king
-    diagonals = [getLineFrom(color, k, i, j) for i in [-1, 1] for j in [-1, 1]]
+    diagonals = SQUAREDICT[k]["diagonals"]
     for diag in diagonals:
         for s in diag:
             if type(board[s]) == empty:
@@ -311,11 +349,7 @@ def isInCheck(board: dict, color: str) -> bool:
                 break
 
     # Check that closest straight line piece isn't rook or Queen
-    straights = [
-        getLineFrom(color, k, i * mult, j * mult)
-        for i, j in zip([0, 1], [1, 0])
-        for mult in [-1, 1]
-    ]
+    straights = SQUAREDICT[k]["straights"]
     for straight in straights:
         for s in straight:
             if type(board[s]) == empty:
@@ -356,28 +390,11 @@ def getPotentialValidMoves(
             where the moving color is in check. dicts have keys 'piece', 'oldSquare', 'newSquare', 'special'
     """
 
+    global SQUAREDICT
     movingPiece = board[currSquare]
     movingColor = movingPiece.color
-    diagonals = [
-        getLineFrom(
-            color=movingColor,
-            loc=currSquare,
-            rankIncrement=i,
-            fileIncrement=j,
-        )
-        for i in [-1, 1]
-        for j in [-1, 1]
-    ]
-    straights = [
-        getLineFrom(
-            color=movingColor,
-            loc=currSquare,
-            rankIncrement=i * mult,
-            fileIncrement=j * mult,
-        )
-        for i, j in zip([0, 1], [1, 0])
-        for mult in [-1, 1]
-    ]
+    diagonals = SQUAREDICT[currSquare]["diagonals"]
+    straights = SQUAREDICT[currSquare]["straights"]
     move = {"piece": str(movingPiece), "oldSquare": currSquare, "special": None}
 
     # King squares
@@ -480,7 +497,7 @@ def getPotentialValidMoves(
 
     # Knight squares
     if movingPiece.name == "N":
-        for s in getKnightAttackSquares(currSquare):
+        for s in SQUAREDICT[currSquare]["knights"]:
             currOccupant = board[s]
             if type(currOccupant) == empty:
                 potentialValidMoves.append({**move, "newSquare": s})
