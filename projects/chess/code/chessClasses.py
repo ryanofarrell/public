@@ -425,6 +425,8 @@ def getPotentialValidMoves(
             pass
         elif type(board[getRelativeLoc("w", currSquare, 0, 2)]) == piece:
             pass
+        elif isInCheck(board, movingColor):
+            pass
         else:
             potentialValidMoves.append(
                 {
@@ -446,6 +448,8 @@ def getPotentialValidMoves(
         elif type(board[getRelativeLoc("w", currSquare, 0, -2)]) == piece:
             pass
         elif type(board[getRelativeLoc("w", currSquare, 0, -3)]) == piece:
+            pass
+        elif isInCheck(board, movingColor):
             pass
         else:
             potentialValidMoves.append(
