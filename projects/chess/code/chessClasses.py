@@ -1,5 +1,5 @@
 # %% Imports
-from typing import List
+from typing import List, Tuple, Union
 import pandas as pd
 import numpy as np
 from helpers import getRelativeFp
@@ -26,6 +26,8 @@ class empty(object):
 
 
 class piece(object):
+    "Piece square on board"
+
     def __init__(self, color, name):
         assert color in ["b", "w"], "Invalid color"
         assert name in ["K", "Q", "B", "N", "R", "P"], "Invalid name"
@@ -38,19 +40,24 @@ class piece(object):
 
 
 # %% Functions
-def isPiece(p):
+def isPiece(p: object) -> bool:
     "Is p of type piece?"
     return type(p) == piece
 
 
-def getKingSquare(board: dict, color: str):
+def isLastRank(color: str, s: str) -> bool:
+    "Is square s the last rank aka promotion time?"
+    return int(s[1]) - [7, 0][color == "b"] == 1
+
+
+def getKingSquare(board: dict, color: str) -> Union[str, ValueError]:
     "Returns the square in which the king is located"
 
     for s in board:
         if str(board[s]) == color + "K":
             return s
 
-    raise ValueError("No square")
+    raise ValueError(f"No king square for {color}")
 
 
 def getRelativeLoc(color: str, loc: str, addRank: int, addFile: int) -> str:
@@ -84,7 +91,7 @@ def getRelativeLoc(color: str, loc: str, addRank: int, addFile: int) -> str:
 
 
 def getOtherColor(c: str) -> str:
-    "Returns the other color of w or b"
+    "Returns the other color of c=w or c=b"
     assert c in ["w", "b"], f"Invalid color {c}"
     if c == "w":
         return "b"
@@ -130,7 +137,8 @@ def getLineFrom(
     return out
 
 
-def getKnightAttackSquares(loc):
+def getKnightAttackSquares(loc: str) -> List[str]:
+    "Returns all the squares that are one knight-jump away from loc"
     out = [
         getRelativeLoc("w", loc, r * rankMult, f * fileMult)
         for r, f in zip([1, 2], [2, 1])
@@ -174,7 +182,7 @@ def isInCheck(board: dict, color: str) -> bool:
         if str(board[s]) == otherColor + "N":
             return True
 
-    # Check that closest diagonal piece isn't bishop or Queen
+    # Check that closest diagonal piece isn't bishop or Queen or king
     diagonals = [getLineFrom(color, k, i, j) for i in [-1, 1] for j in [-1, 1]]
     for diag in diagonals:
         for s in diag:
@@ -204,9 +212,34 @@ def isInCheck(board: dict, color: str) -> bool:
             else:
                 break
 
+    # Check that nearest piece in square around given piece isn't other king
+    for line in straights + diagonals:
+        if len(line) == 0:
+            continue
+        elif type(line[0]) == empty:
+            pass
+        elif str(board[line[0]]) == otherColor + "K":
+            return True
 
-def getPotentialValidMoves(board, currSquare, prevMoves):
-    "Returns all moves for a piece REGARDLESS of if they leave the moving color in check"
+
+def getPotentialValidMoves(
+    board: dict, currSquare: str, prevMoves: List[dict]
+) -> List[dict]:
+    """Returns all moves for a piece REGARDLESS of if they leave the moving color in check
+
+    Args:
+
+        board (dict) -- current board with keys=squares, values=pieces or empty
+
+        currSquare (str) -- square from which to get valid moves
+
+        prevMoves (list of dict) -- previous moves in game to-date (for enpassant)
+
+    Returns:
+
+        list of dict -- all moves where piece can end up. Note this list may include some
+            where the moving color is in check. dicts have keys 'piece', 'oldSquare', 'newSquare', 'special'
+    """
 
     movingPiece = board[currSquare]
     movingColor = movingPiece.color
@@ -344,13 +377,28 @@ def getPotentialValidMoves(board, currSquare, prevMoves):
         # if 1 square ahead is empty, that is allowed, check two ahead
         oneAhead = getRelativeLoc(movingColor, currSquare, 1, 0)
         if type(board[oneAhead]) == empty:
-            potentialValidMoves.append({**move, "newSquare": oneAhead})
-
-            # If piece move count == 0 then two ahead is allowed if its not a piece
-            twoAhead = getRelativeLoc(movingColor, currSquare, 2, 0)
-            if movingPiece.moveCnt == 0:
-                if type(board[twoAhead]) == empty:
-                    potentialValidMoves.append({**move, "newSquare": twoAhead})
+            # If one ahead is last rank, add promotions only
+            if isLastRank(movingColor, oneAhead):
+                potentialValidMoves.append(
+                    {**move, "newSquare": oneAhead, "special": "promoteQ"}
+                )
+                potentialValidMoves.append(
+                    {**move, "newSquare": oneAhead, "special": "promoteR"}
+                )
+                potentialValidMoves.append(
+                    {**move, "newSquare": oneAhead, "special": "promoteN"}
+                )
+                potentialValidMoves.append(
+                    {**move, "newSquare": oneAhead, "special": "promoteB"}
+                )
+            # If one ahead is not last rank, add pawn move
+            else:
+                potentialValidMoves.append({**move, "newSquare": oneAhead})
+                # If piece move count == 0 then two ahead is allowed if its not a piece
+                twoAhead = getRelativeLoc(movingColor, currSquare, 2, 0)
+                if movingPiece.moveCnt == 0:
+                    if type(board[twoAhead]) == empty:
+                        potentialValidMoves.append({**move, "newSquare": twoAhead})
 
         # Takes one rank and +/1 1 file
         takeSquares = [
@@ -361,7 +409,24 @@ def getPotentialValidMoves(board, currSquare, prevMoves):
         for takeSquare in takeSquares:
             if type(board[takeSquare]) == piece:
                 if board[takeSquare].color != movingColor:
-                    potentialValidMoves.append({**move, "newSquare": takeSquare})
+                    # If take is last rank only add promotions
+                    if isLastRank(movingColor, takeSquare):
+                        potentialValidMoves.append(
+                            {**move, "newSquare": takeSquare, "special": "promoteQ"}
+                        )
+                        potentialValidMoves.append(
+                            {**move, "newSquare": takeSquare, "special": "promoteR"}
+                        )
+                        potentialValidMoves.append(
+                            {**move, "newSquare": takeSquare, "special": "promoteN"}
+                        )
+                        potentialValidMoves.append(
+                            {**move, "newSquare": takeSquare, "special": "promoteB"}
+                        )
+                    # If take is not last rank add normal take
+                    else:
+                        potentialValidMoves.append({**move, "newSquare": takeSquare})
+
         # en passant logic
         # If prevmove was two squares forward and one square back was takeable is square in takeSquares?
         if len(prevMoves) == 0:  # first move can't be en passant
@@ -389,9 +454,25 @@ def getPotentialValidMoves(board, currSquare, prevMoves):
 
 
 def getNewBoard(board: dict, move: dict) -> dict:
-    "Returns what the new board would look like after move is executed"
-    newBoard = board.copy()
+    """Returns what the new board would look like after move is executed.
+    Handles pawn promotions, long and short castles, and enpassant
 
+    Args:
+
+        board (dict) -- keys are squares, values are pieces
+
+        move (dict) -- piece, oldSquare, newSquare, special
+
+    Returns:
+
+        dict -- updated board after executing move
+    """
+
+    # Ensure move matches pattern
+    if sorted(move.keys()) != ["newSquare", "oldSquare", "piece", "special"]:
+        raise MoveError("Specified move does not have all required elements")
+
+    newBoard = board.copy()
     movingPiece = board[move["oldSquare"]]
     movingColor = movingPiece.color
 
@@ -401,6 +482,10 @@ def getNewBoard(board: dict, move: dict) -> dict:
         )
     newBoard[move["newSquare"]] = movingPiece
     newBoard[move["oldSquare"]] = empty()
+
+    # Promotion Logic - create new piece in location
+    if move["special"] in [f"promote{p}" for p in ["Q", "N", "R", "B"]]:
+        newBoard[move["newSquare"]] = piece(movingColor, move["special"][-1])
 
     if move["special"] == "enpassant":
         newBoard[getRelativeLoc(movingColor, move["newSquare"], -1, 0)] = empty()
@@ -418,10 +503,28 @@ def getNewBoard(board: dict, move: dict) -> dict:
     return newBoard
 
 
-def getValidMoves(board: dict, color: str, prevMoves: List[dict]) -> list:
-    "Gets all valid moves for a specific color. If list length = 0, checkmate!"
+def getValidMoves(board: dict, color: str, prevMoves: List[dict]) -> Tuple[list, dict]:
+    """Gets all valid moves for a specific color. If list length = 0, checkmate!
+
+    Args:
+
+        board (dict) -- keys are squares, values are pieces
+
+        color (str) -- w or b
+
+        prevMoves (list of dict) -- previous moves in game to-date (for enpassant)
+
+    Returns:
+
+        tuple of list, dict -- list of valid moves with keys piece, oldSquare, newSquare, special
+            and dict of boards after executing said move. Key for the dict is str(move)
+
+    """
     potentialValidMoves = []
     validMoves = []
+    validBoards = {}
+
+    # Loop through squares, if square has same-color piece, save potential valid moves
     for currSquare in board:
         if type(board[currSquare]) == empty:
             continue
@@ -431,13 +534,16 @@ def getValidMoves(board: dict, color: str, prevMoves: List[dict]) -> list:
             continue
 
         potentialValidMoves += getPotentialValidMoves(board, currSquare, prevMoves)
+    # See if potential move results in check, if not, save move and board
     for move in potentialValidMoves:
-        if isInCheck(getNewBoard(board, move), color):
+        newBoard = getNewBoard(board, move)
+        if isInCheck(newBoard, color):
             continue
 
         validMoves.append(move)
+        validBoards[str(move)] = newBoard
 
-    return validMoves
+    return validMoves, validBoards
 
 
 # %% Chess game class
@@ -467,6 +573,10 @@ class chessGame(object):
         self._toMove = "w"
         self._waiting = "b"
         self._moves = []
+        self.validMoves, self.validBoards = getValidMoves(
+            self.board, self._toMove, self._moves
+        )
+        self.status = "ongoing"
 
     def _changeTurn(self):
         if self._toMove == "w":
@@ -476,11 +586,7 @@ class chessGame(object):
             self._toMove = "w"
             self._waiting = "b"
 
-    def _isPiece(self, itm):
-        "Is the itm a piece class?"
-        return type(itm) == piece
-
-    def move(self, oldSquare: str, newSquare: str):
+    def move(self, oldSquare: str, newSquare: str, promoteTo: Union[str, None] = None):
         "Execute specified move from old to new"
 
         movingPiece = self.board[oldSquare]
@@ -488,10 +594,14 @@ class chessGame(object):
             "piece": str(movingPiece),
             "oldSquare": oldSquare,
             "newSquare": newSquare,
+            "special": None,
         }
 
+        if promoteTo is not None:
+            potentialMove["special"] = f"promote{promoteTo}"
+
         # Ensure we are only moving pieces
-        if not self._isPiece(itm=movingPiece):
+        if not isPiece(movingPiece):
             raise MoveError("Must move a piece")
 
         # Only move if its your turn
@@ -499,9 +609,8 @@ class chessGame(object):
             raise MoveError(f"It is {self._toMove} turn")
 
         # Get valid moves, ensure this move is in list
-        validMoves = getValidMoves(self.board, self._toMove, self._moves)
         foundMove = None
-        for m in validMoves:
+        for m in self.validMoves:
             if all(
                 [m[k] == potentialMove[k] for k in ["piece", "oldSquare", "newSquare"]]
             ):
@@ -510,11 +619,18 @@ class chessGame(object):
         if foundMove is None:
             raise MoveError(f"Invalid move {potentialMove}")
 
-        # Update board, change turn, save move
-        self.board = getNewBoard(self.board, foundMove)
-        self.board[newSquare].moveCnt += 1
+        # Update board, change turn, save move, get next player's valid moves
+        self.board = self.validBoards[str(foundMove)]
         self._changeTurn()
         self._moves.append(foundMove)
+        self.board[newSquare].moveCnt += 1
+        self.validMoves, self.validBoards = getValidMoves(
+            self.board, self._toMove, self._moves
+        )
+
+        if len(self.validMoves) == 0:
+            self.status = f"mate for {getOtherColor(self._toMove)}"
+            print(f"mate for {getOtherColor(self._toMove)}")
 
     def __repr__(self):
         out = ""
@@ -539,6 +655,9 @@ def findMove(move, validMoves):
         if all([move[f] == validMove[f] for f in ["piece", "newSquare"]]):
             matches.append(validMove)
 
+    if type(move["promoteTo"]) == str:
+        matches = [m for m in matches if m["special"] == f"promote{move['promoteTo']}"]
+
     if len(matches) == 1:
         return matches[0]
     elif len(matches) > 1:
@@ -557,9 +676,11 @@ def movesIntoGame(movesStr):
     moveDf = pd.DataFrame(
         {"move": moves, "color": np.tile(["w", "b"], len(moves))[: len(moves)]}
     )
-    moveDf[["piece", "oldFile", "take", "newSquare", "check", "mate"]] = moveDf[
-        "move"
-    ].str.extract(r"([RBNKQ]{1})?([a-h])?(x)?([a-h][0-8])(\+)?(\#)?")
+    moveDf[
+        ["piece", "oldFile", "take", "newSquare", "promoteTo", "check", "mate"]
+    ] = moveDf["move"].str.extract(
+        r"([RBNKQ]{1})?([a-h])?(x)?([a-h][0-8])=?([RBNQ])?(\+)?(\#)?"
+    )
 
     # Handle castle notation
     moveDf.loc[moveDf["move"].str[:3] == "O-O", "piece"] = "K"
@@ -575,36 +696,56 @@ def movesIntoGame(movesStr):
     # Get piece name
     moveDf["piece"] = moveDf["color"] + moveDf["piece"].fillna("P")
 
+    # Fill special with contents
+    moveDf["special"] = None
+    moveDf.loc[moveDf["move"] == "O-O", "special"] = "shortCastle"
+    moveDf.loc[moveDf["move"] == "O-O-O", "special"] = "shortCastle"
+    moveDf.loc[moveDf["promoteTo"] == "Q", "special"] = "promoteQ"
+    moveDf.loc[moveDf["promoteTo"] == "R", "special"] = "promoteR"
+    moveDf.loc[moveDf["promoteTo"] == "N", "special"] = "promoteN"
+    moveDf.loc[moveDf["promoteTo"] == "B", "special"] = "promoteB"
+
     # Create game, iterate through moves
     game = chessGame()
     for _, move in moveDf.iterrows():
-        try:
-            validMoves = getValidMoves(game.board, game._toMove, game._moves)
-            validMove = findMove(move, validMoves)
-            # print(f"equivalent move to {move['move']} is {validMove}")
-            game.move(validMove["oldSquare"], validMove["newSquare"])
-        except MoveError:
-            print(move["move"])
-            print(game)
-            break
+        # try:
+        validMoves = game.validMoves
+        validMove = findMove(move, validMoves)
+        # print(f"equivalent move to {move['move']} is {validMove}")
+        if validMove["special"] in [f"promote{p}" for p in ["Q", "R", "N", "B"]]:
+            promoteTo = validMove["special"][-1]
+        else:
+            promoteTo = None
+        game.move(validMove["oldSquare"], validMove["newSquare"], promoteTo)
+        # except MoveError:
+        #     print(move["move"])
+        #     print(game)
+        #     break
 
-    # TODO pawn conversions
     print(game)
 
 
 # %% Main
 if __name__ == "__main__":
     df = pd.read_csv(getRelativeFp(__file__, "../data/input/games.csv"))
-    movesStr = df.iloc[5422]["moves"]
+    movesStr = df.iloc[16943]["moves"]
     game = chessGame()
 
     # print(game)
     game.move("e2", "e4")
-    game.move("f7", "f6")
-    game.move("d2", "d4")
-    game.move("g7", "g5")
-    # game.move("d1", "h5")
-    moves = pd.DataFrame(getValidMoves(game.board, game._toMove, game._moves))
+    game.move("f7", "f5")
+    game.move("e4", "f5")
+    game.move("g7", "g6")
+    game.move("f5", "g6")
+    game.move("e7", "e5")
+    game.move("g6", "h7")
+    game.move("e5", "e4")
+    moves = pd.DataFrame(game.validMoves)
+    game.move("h7", "g8", "Q")
+    game.move("a7", "a6")
+    game.move("d1", "f3")
+    game.move("a6", "a5")
+    game.move("f3", "f7")
     # game.move("c8", "d7")
     # game.move("e1", "g1")
     # game.move("d7", "f5")
