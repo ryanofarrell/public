@@ -799,20 +799,37 @@ class chessGame(object):
 
 
 # %% Transcribe game into engine
-def findMove(move, validMoves):
-    "Gets the move from list of validMoves"
+def findMove(move: pd.Series, validMoves: List[dict]):
+    """Gets the specified move dict from list of validMoves.
 
+    Args:
+
+        move (Series) -- a row from moveDf, with values for:
+            color, piece, oldFile, oldRank, take, newSquare, promoteTo, check, mate, special
+
+        validMoves (list of dict) -- a list of valid moves given board state. Dict keys are:
+            piece, oldSquare, newSquare, special
+    """
+
+    # Look for validmoves that match piece and newsquare
     matches = []
     for validMove in validMoves:
         if all([move[f] == validMove[f] for f in ["piece", "newSquare"]]):
             matches.append(validMove)
 
+    # If move is promotion, filter to the validmoves where promotion matches
     if type(move["promoteTo"]) == str:
         matches = [m for m in matches if m["special"] == f"promote{move['promoteTo']}"]
 
+    # If exactly one matching move found, return that
     if len(matches) == 1:
         return matches[0]
+
+    # If more than one match
     elif len(matches) > 1:
+
+        # Handle pawn and rook takes with multiple options
+        # (if notation specifies file OR rank)
         matches = [
             m
             for m in matches
@@ -828,11 +845,28 @@ def findMove(move, validMoves):
         raise MoveError(f"No matching move for {move['move']}")
 
 
-def movesIntoGame(
-    movesStr: str, mateColor: Union[str, None] = None, n: Union[int, None] = None
-):
-    if n is not None:
-        print(f"On game {n}")
+def movesStrIntoDf(movesStr: str) -> pd.DataFrame:
+    """Takes a move str and returns a parsed DataFrame of all the moves.
+
+    Args:
+
+        movesStr (str) -- chess notation of all the game's moves
+
+    Returns:
+
+        DataFrame -- columns are:
+            move (original string in chess notation),
+            color (w or b),
+            piece (P, R, N, B, Q, K),
+            oldFile (for identifying rook/pawn/knight takes),
+            oldRank (for identifying rook/pawn/knight takes),
+            take (x if move was take),
+            newSquare (where old piece ended up),
+            promoteTo (piece pawn was promoted to, QNRB),
+            check (+ if move results in opp in check),
+            mate (# if move results in opp in mate),
+            special (longCastle, shortCastle, promote<promoteTo>)
+    """
     moves = movesStr.split(" ")
     moveDf = pd.DataFrame(
         {"move": moves, "color": np.tile(["w", "b"], len(moves))[: len(moves)]}
@@ -879,6 +913,16 @@ def movesIntoGame(
     moveDf.loc[moveDf["promoteTo"] == "N", "special"] = "promoteN"
     moveDf.loc[moveDf["promoteTo"] == "B", "special"] = "promoteB"
 
+    return moveDf
+
+
+def movesIntoGame(
+    movesStr: str, mateColor: Union[str, None] = None, n: Union[int, None] = None
+):
+    if n % 50 == 0:
+        print(f"On game {n}")
+
+    moveDf = movesStrIntoDf(movesStr)
     # Create game, iterate through moves
     game = chessGame()
     for _, move in moveDf.iterrows():
