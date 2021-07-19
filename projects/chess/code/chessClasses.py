@@ -15,6 +15,11 @@ class MoveError(Exception):
     pass
 
 
+class GameError(Exception):
+    "Generic error for chess game"
+    pass
+
+
 class empty(object):
     "Empty square of board"
 
@@ -576,7 +581,7 @@ class chessGame(object):
         self.validMoves, self.validBoards = getValidMoves(
             self.board, self._toMove, self._moves
         )
-        self.status = "ongoing"
+        self.winner = None
 
     def _changeTurn(self):
         if self._toMove == "w":
@@ -599,6 +604,10 @@ class chessGame(object):
 
         if promoteTo is not None:
             potentialMove["special"] = f"promote{promoteTo}"
+
+        # Ensure the game is not over
+        if self.winner is not None:
+            raise MoveError(f"Game is over, {self.winner} already won!")
 
         # Ensure we are only moving pieces
         if not isPiece(movingPiece):
@@ -635,9 +644,9 @@ class chessGame(object):
             self.board, self._toMove, self._moves
         )
 
+        # Handle winning scenario
         if len(self.validMoves) == 0:
-            self.status = f"mate for {getOtherColor(self._toMove)}"
-            print(f"mate for {getOtherColor(self._toMove)}")
+            self.winner = getOtherColor(self._toMove)
 
     def __repr__(self):
         out = ""
@@ -737,27 +746,37 @@ def movesIntoGame(
     # Create game, iterate through moves
     game = chessGame()
     for _, move in moveDf.iterrows():
-        # try:
         validMoves = game.validMoves
         validMove = findMove(move, validMoves)
-        # print(f"equivalent move to {move['move']} is {validMove}")
         if validMove["special"] in [f"promote{p}" for p in ["Q", "R", "N", "B"]]:
             promoteTo = validMove["special"][-1]
         else:
             promoteTo = None
         game.move(validMove["oldSquare"], validMove["newSquare"], promoteTo)
-        # except MoveError:
-        #     print(move["move"])
-        #     print(game)
-        #     break
 
-    print(game)
+    # If outcome is mate, ensure it matches the results of my engine
+    if type(mateColor) == str:
+        if type(game.winner) == str:
+            if game.winner == mateColor:
+                print(f"Outcome of mate by {mateColor} matches engine!")
+            else:
+                print(game)
+                raise GameError(
+                    f"Engine has winner as {game.winner}, data has {mateColor}"
+                )
+    else:
+        print(f"Finished entirety of moves with no outcome")
 
 
 # %% Main
 if __name__ == "__main__":
     df = pd.read_csv(getRelativeFp(__file__, "../data/input/games.csv"))
-    movesStr = df.iloc[16943]["moves"]
+    df["mateColor"] = None
+    df.loc[df["victory_status"] == "mate", "mateColor"] = df["winner"].str[0]
+    df.iloc[1000:5000].apply(
+        lambda x: movesIntoGame(x["moves"], x["mateColor"], x.name), axis=1
+    )
+    movesStr = df.iloc[226]["moves"]
     game = chessGame()
 
     # print(game)
