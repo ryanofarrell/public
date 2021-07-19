@@ -609,15 +609,22 @@ class chessGame(object):
             raise MoveError(f"It is {self._toMove} turn")
 
         # Get valid moves, ensure this move is in list
-        foundMove = None
+        foundMoves = []
         for m in self.validMoves:
             if all(
                 [m[k] == potentialMove[k] for k in ["piece", "oldSquare", "newSquare"]]
             ):
-                foundMove = m.copy()
-                break
-        if foundMove is None:
+                foundMoves.append(m.copy())
+        if len(foundMoves) == 0:
             raise MoveError(f"Invalid move {potentialMove}")
+        elif len(foundMoves) >= 2:
+            foundMoves = [
+                m for m in foundMoves if (m["special"] == f"promote{promoteTo}")
+            ]
+            if len(foundMoves) != 1:
+                raise MoveError(f"Found too many moves {foundMoves}")
+
+        foundMove = foundMoves[0]
 
         # Update board, change turn, save move, get next player's valid moves
         self.board = self.validBoards[str(foundMove)]
