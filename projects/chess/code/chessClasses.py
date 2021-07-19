@@ -1011,27 +1011,26 @@ if __name__ == "__main__":
     df = pd.read_csv(getRelativeFp(__file__, "../data/input/games.csv"))
     df["mateColor"] = None
     df.loc[df["victory_status"] == "mate", "mateColor"] = df["winner"].str[0]
-    df.iloc[1000:5000].apply(
-        lambda x: movesIntoGame(x["moves"], x["mateColor"], x.name), axis=1
-    )
-    movesStr = df.iloc[226]["moves"]
-    game = chessGame()
+    df.apply(lambda x: movesIntoGame(x["moves"], x["mateColor"], x.name), axis=1)
 
-    # print(game)
-    game.move("e2", "e4")
-    game.move("f7", "f5")
-    game.move("e4", "f5")
-    game.move("g7", "g6")
-    game.move("f5", "g6")
-    game.move("e7", "e5")
-    game.move("g6", "h7")
-    game.move("e5", "e4")
-    moves = pd.DataFrame(game.validMoves)
-    game.move("h7", "g8", "Q")
-    game.move("a7", "a6")
-    game.move("d1", "f3")
-    game.move("a6", "a5")
-    game.move("f3", "f7")
+    # movesStr = df.iloc[226]["moves"]
+
+    # game = chessGame()
+    # # print(game)
+    # game.move("e2", "e4")
+    # game.move("f7", "f5")
+    # game.move("e4", "f5")
+    # game.move("g7", "g6")
+    # game.move("f5", "g6")
+    # game.move("e7", "e5")
+    # game.move("g6", "h7")
+    # game.move("e5", "e4")
+    # moves = pd.DataFrame(game.validMoves)
+    # game.move("h7", "g8", "Q")
+    # game.move("a7", "a6")
+    # game.move("d1", "f3")
+    # game.move("a6", "a5")
+    # game.move("f3", "f7")
     # game.move("c8", "d7")
     # game.move("e1", "g1")
     # game.move("d7", "f5")
