@@ -683,26 +683,43 @@ def findMove(move, validMoves):
         raise MoveError(f"No matching move for {move['move']}")
 
 
-def movesIntoGame(movesStr):
+def movesIntoGame(
+    movesStr: str, mateColor: Union[str, None] = None, n: Union[int, None] = None
+):
+    if n is not None:
+        print(f"On game {n}")
     moves = movesStr.split(" ")
     moveDf = pd.DataFrame(
         {"move": moves, "color": np.tile(["w", "b"], len(moves))[: len(moves)]}
     )
     moveDf[
-        ["piece", "oldFile", "take", "newSquare", "promoteTo", "check", "mate"]
+        [
+            "piece",
+            "oldFile",
+            "oldRank",
+            "take",
+            "newSquare",
+            "promoteTo",
+            "check",
+            "mate",
+        ]
     ] = moveDf["move"].str.extract(
-        r"([RBNKQ]{1})?([a-h])?(x)?([a-h][0-8])=?([RBNQ])?(\+)?(\#)?"
+        r"([RBNKQ]{1})?([a-h])?([0-8])?(x)?([a-h][0-8])=?([RBNQ])?(\+)?(\#)?"
     )
 
     # Handle castle notation
     moveDf.loc[moveDf["move"].str[:3] == "O-O", "piece"] = "K"
-    moveDf.loc[(moveDf["move"] == "O-O") & (moveDf["color"] == "w"), "newSquare"] = "g1"
-    moveDf.loc[(moveDf["move"] == "O-O") & (moveDf["color"] == "b"), "newSquare"] = "g8"
     moveDf.loc[
-        (moveDf["move"] == "O-O-O") & (moveDf["color"] == "w"), "newSquare"
+        (moveDf["move"].str[:3] == "O-O") & (moveDf["color"] == "w"), "newSquare"
+    ] = "g1"
+    moveDf.loc[
+        (moveDf["move"].str[:3] == "O-O") & (moveDf["color"] == "b"), "newSquare"
+    ] = "g8"
+    moveDf.loc[
+        (moveDf["move"].str[:5] == "O-O-O") & (moveDf["color"] == "w"), "newSquare"
     ] = "c1"
     moveDf.loc[
-        (moveDf["move"] == "O-O-O") & (moveDf["color"] == "b"), "newSquare"
+        (moveDf["move"].str[:5] == "O-O-O") & (moveDf["color"] == "b"), "newSquare"
     ] = "c8"
 
     # Get piece name
@@ -710,8 +727,8 @@ def movesIntoGame(movesStr):
 
     # Fill special with contents
     moveDf["special"] = None
-    moveDf.loc[moveDf["move"] == "O-O", "special"] = "shortCastle"
-    moveDf.loc[moveDf["move"] == "O-O-O", "special"] = "shortCastle"
+    moveDf.loc[moveDf["move"].str[:3] == "O-O", "special"] = "shortCastle"
+    moveDf.loc[moveDf["move"].str[:5] == "O-O-O", "special"] = "longCastle"
     moveDf.loc[moveDf["promoteTo"] == "Q", "special"] = "promoteQ"
     moveDf.loc[moveDf["promoteTo"] == "R", "special"] = "promoteR"
     moveDf.loc[moveDf["promoteTo"] == "N", "special"] = "promoteN"
