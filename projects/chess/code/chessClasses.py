@@ -2,7 +2,7 @@
 from typing import List, Tuple, Union
 import pandas as pd
 import numpy as np
-from helpers import getRelativeFp
+from helpers import getRelativeFp, readSql, executeSql
 from copy import deepcopy
 
 # %% Constants
@@ -10,7 +10,8 @@ FILES = ["a", "b", "c", "d", "e", "f", "g", "h"]
 RANKS = ["1", "2", "3", "4", "5", "6", "7", "8"]
 SQUARES = [f + r for f in FILES for r in RANKS]
 
-# %% Lower-level classes
+DBPATH = getRelativeFp(__file__, "../data/db/chess.db")
+# %% Exceptions
 class MoveError(Exception):
     "Generic error for move errors"
     pass
@@ -45,6 +46,113 @@ class piece(object):
     def __repr__(self):
         return self.color + self.name
 
+
+# %% Database encoding functions
+
+# Move encoding to str and back
+def move2Str(move: dict) -> str:
+    "Encodes a move into a str for storage in db"
+    out = move["piece"] + move["oldSquare"] + move["newSquare"]
+    if move["special"] == None:
+        pass
+    else:
+        out += move["special"]
+    return out
+
+
+def str2Move(s: str) -> dict:
+    "Parses a str to get a move dict, keys=piece, oldSquare, newSquare, special"
+    out = {"piece": s[:2], "oldSquare": s[2:4], "newSquare": s[4:6]}
+    if len(s) == 6:
+        out["special"] = None
+    else:
+        out["special"] = s[6:]
+    return out
+
+
+# Square encoding to str and back
+def square2Str(squareObj: Union[empty, piece]):
+    "Encodes a square object into a str"
+    if type(squareObj) == empty:
+        return ""
+    elif type(squareObj) == piece:
+        return squareObj.color + squareObj.name + str(squareObj.hasMoved)[0]
+
+
+def str2Square(s: str) -> Union[empty, piece]:
+    "Parses a str to get a square object (empty or piece)"
+    if len(s) == 2:  # If empty square, init empty
+        return empty()
+    else:  # If there is something
+        assert len(s) == 5, "should only be 5 characters for encoding a piece"
+        return piece(color=s[2], name=s[3], hasMoved=s[4] == "T")
+
+
+# Board encoding to str and back
+def board2Str(board: dict) -> str:
+    "Encodes a board into a string format for storage in db"
+    boardStr = " ".join([s + square2Str(board[s]) for s in board])
+    return boardStr
+
+
+def str2Board(s: str) -> dict:
+    "Parses a string, returning a dict of objects of current game state"
+    boardList = s.split()
+    assert len(boardList) == 64, boardList
+    out = {}
+    for s in boardList:
+        out[s[:2]] = str2Square(s)
+
+    return out
+
+
+# List of moves encoding to str and back
+def moves2Str(moves: List[dict]) -> str:
+    return " ".join([move2Str(m) for m in moves])
+
+
+def str2Moves(s: str) -> List[dict]:
+    return [str2Move(m) for m in s.split(" ")]
+
+
+# List of boards encoding to str and back
+def boards2Str(boards: List[dict]) -> str:
+    return ",".join([board2Str(b) for b in boards])
+
+
+def str2Boards(s: str) -> List[dict]:
+    if len(s) == 0:
+        return []
+    return [str2Board(b) for b in s.split(",")]
+
+
+# %% Getting boards dict from DB
+# TODO this is such a big table cause of the strings...how to make smaller?
+# def getBoardsDict() -> dict:
+#     boards = readSql("select * from boards", DBPATH)
+#     boardsDict = {}
+
+#     def addToDict(row):
+#         validMoves = str2Moves(row["validMovesStr"])
+#         validBoardsList = str2Boards(row["validBoardsStr"])
+#         validBoardsDict = {}
+#         for move, board in zip(validMoves, validBoardsList):
+#             validBoardsDict[move2Str(move)] = board
+#         boardsDict[(row["boardStr"], row["toMove"])] = {
+#             "validMoves": validMoves,
+#             "validBoards": validBoardsDict,
+#         }
+
+#     boards.apply(lambda row: addToDict(row), axis=1)
+
+#     return boardsDict
+
+
+# BOARDSDICT = getBoardsDict()
+
+
+# %% Todos
+# TODO a lot of this is repeated, especially openings. Save in DB?
 
 # %% Functions
 def isPiece(p: object) -> bool:
@@ -773,6 +881,46 @@ def movesIntoGame(
                 )
     else:
         print(f"Finished entirety of moves with no outcome")
+# %% Database table creation
+def createBoardsTable(dbPath, dropOld=False):
+    """
+    Creates table 'boards', mapping moves to board layout.
+
+    Columns:
+        boardStr: string of board layout
+        toMove: str of color to move
+        validMovesStr: str of list of valid moves
+        validBoardsStr: str of list of validBoards, comma separated
+
+    Index on boardStr, toMove.
+
+    Passes through all commands to runSqlQuery fn,
+    so if default args for that change, so will this.
+
+    """
+    # Drop old table if exists
+    if dropOld:
+        q = f"""
+        drop table if exists boards
+        """
+        executeSql(q, dbPath)
+
+    # Create table and indeces
+    q = f"""
+    create table boards(
+        boardStr TEXT not null,
+        toMove TEXT not null,
+        validMovesStr TEXT,
+        validBoardsStr TEXT,
+        primary key (boardStr asc, toMove asc)
+    )
+    """
+    executeSql(q, dbPath)
+    q = f"""
+    CREATE INDEX boardsBoardStrToMoveIdx
+    ON boards(boardStr, toMove)
+    """
+    print(f"Success!")
 
 
 # %% Main
