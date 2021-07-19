@@ -581,21 +581,21 @@ class chessGame(object):
                 self.board[f + pawnRank] = piece(color, "P")
 
         # Set other things about game
-        self._toMove = "w"
-        self._waiting = "b"
-        self._moves = []
+        self.toMove = "w"
+        self.waiting = "b"
+        self.prevMoves = []
         self.validMoves, self.validBoards = getValidMoves(
-            self.board, self._toMove, self._moves
+            self.board, self.toMove, self.prevMoves
         )
         self.winner = None
 
     def _changeTurn(self):
-        if self._toMove == "w":
-            self._toMove = "b"
-            self._waiting = "w"
+        if self.toMove == "w":
+            self.toMove = "b"
+            self.waiting = "w"
         else:
-            self._toMove = "w"
-            self._waiting = "b"
+            self.toMove = "w"
+            self.waiting = "b"
 
     def move(self, oldSquare: str, newSquare: str, promoteTo: Union[str, None] = None):
         "Execute specified move from old to new"
@@ -620,8 +620,8 @@ class chessGame(object):
             raise MoveError("Must move a piece")
 
         # Only move if its your turn
-        if movingPiece.color != self._toMove:
-            raise MoveError(f"It is {self._toMove} turn")
+        if movingPiece.color != self.toMove:
+            raise MoveError(f"It is {self.toMove} turn")
 
         # Get valid moves, ensure this move is in list
         foundMoves = []
@@ -642,22 +642,21 @@ class chessGame(object):
         foundMove = foundMoves[0]
 
         # Update board, change turn, save move, get next player's valid moves
-        self.board = self.validBoards[str(foundMove)]
+        self.board = self.validBoards[move2Str(foundMove)]
         self._changeTurn()
-        self._moves.append(foundMove)
-        self.board[newSquare].moveCnt += 1
+        self.prevMoves.append(foundMove)
         self.board[newSquare].hasMoved = True
         self.validMoves, self.validBoards = getValidMoves(
-            self.board, self._toMove, self._moves
+            self.board, self.toMove, self.prevMoves
         )
 
         # Handle winning scenario
         if len(self.validMoves) == 0:
-            self.winner = getOtherColor(self._toMove)
+            self.winner = getOtherColor(self.toMove)
 
     def __repr__(self):
         out = ""
-        out += f"\n{self._toMove} to move"
+        out += f"\n{self.toMove} to move"
         out += "\n  -----------------------------------------"
         for r in reversed(RANKS):
             out += f"\n{r} |"
