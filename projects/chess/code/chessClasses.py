@@ -661,6 +661,7 @@ def getValidMoves(board: dict, color: str, prevMoves: List[dict]) -> Tuple[list,
             and dict of boards after executing said move. Key for the dict is str(move)
 
     """
+
     potentialValidMoves = []
     validMoves = []
     validBoards = {}
@@ -682,7 +683,7 @@ def getValidMoves(board: dict, color: str, prevMoves: List[dict]) -> Tuple[list,
             continue
 
         validMoves.append(move)
-        validBoards[str(move)] = newBoard
+        validBoards[move2Str(move)] = newBoard
 
     return validMoves, validBoards
 
@@ -953,15 +954,16 @@ def movesIntoGame(
     # If outcome is mate, ensure it matches the results of my engine
     if type(mateColor) == str:
         if type(game.winner) == str:
-            if game.winner == mateColor:
-                print(f"Outcome of mate by {mateColor} matches engine!")
-            else:
+            if game.winner != mateColor:
                 print(game)
                 raise GameError(
                     f"Engine has winner as {game.winner}, data has {mateColor}"
                 )
     else:
-        print(f"Finished entirety of moves with no outcome")
+        # print(f"Finished entirety of moves with no outcome")
+        pass
+
+
 # %% Database table creation
 def createBoardsTable(dbPath, dropOld=False):
     """
