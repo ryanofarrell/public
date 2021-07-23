@@ -1,9 +1,12 @@
 # %% Imports
+
 from typing import List, Tuple, Union
 import pandas as pd
 import numpy as np
-from helpers import getRelativeFp, readSql, executeSql
+from helpers import getRelativeFp, readSql, executeSql, dfToTable
 from copy import deepcopy
+import uuid
+import random
 
 # %% Constants
 FILES = ["a", "b", "c", "d", "e", "f", "g", "h"]
@@ -933,35 +936,70 @@ def movesStrIntoDf(movesStr: str) -> pd.DataFrame:
     return moveDf
 
 
-def movesIntoGame(
-    movesStr: str, mateColor: Union[str, None] = None, n: Union[int, None] = None
-):
-    if n % 50 == 0:
-        print(f"On game {n}")
+def parseGameRow(gameRow: pd.Series, updateEvery: int = 50):
+    if gameRow.name % updateEvery == 0:
+        print(f"On game {gameRow.name}")
 
-    moveDf = movesStrIntoDf(movesStr)
+    moveDf = movesStrIntoDf(gameRow["moves"])
+
+    moveNums = []
+    oldBoardStr = []
+    moveStr = []
+    newBoardStr = []
     # Create game, iterate through moves
     game = chessGame()
-    for _, move in moveDf.iterrows():
+    for idx, move in moveDf.iterrows():
+        moveNums.append(idx + 1)
+        oldBoardStr.append(board2Str(game.board))
         validMoves = game.validMoves
         validMove = findMove(move, validMoves)
         if validMove["special"] in [f"promote{p}" for p in ["Q", "R", "N", "B"]]:
             promoteTo = validMove["special"][-1]
         else:
             promoteTo = None
+
+        moveStr.append(move2Str(validMove))
         game.move(validMove["oldSquare"], validMove["newSquare"], promoteTo)
+        newBoardStr.append(board2Str(game.board))
 
     # If outcome is mate, ensure it matches the results of my engine
-    if type(mateColor) == str:
+    if type(gameRow["mateColor"]) == str:
         if type(game.winner) == str:
-            if game.winner != mateColor:
+            if game.winner != gameRow["mateColor"]:
                 print(game)
                 raise GameError(
-                    f"Engine has winner as {game.winner}, data has {mateColor}"
+                    f"Engine has winner as {game.winner}, data has {gameRow['mateColor']}"
                 )
     else:
         # print(f"Finished entirety of moves with no outcome")
         pass
+
+    out = pd.DataFrame(
+        {
+            "gameId": [gameRow["id"]] * len(moveDf),
+            "moveNum": moveNums,
+            "oldBoardStr": oldBoardStr,
+            "moveStr": moveStr,
+            "newBoardStr": newBoardStr,
+        }
+    )
+    dfToTable(out, "moves", DBPATH, ifExists="append", indexCols=None)
+    executeSql(
+        f"""
+        Insert into games values (
+            '{gameRow['id']}',
+            '{gameRow['rated'] == 'true'}',
+            '{gameRow['turns']}',
+            '{gameRow['winner'][0]}',
+            '{gameRow['victory_status']}',
+            '{gameRow['increment_code']}',
+            '{gameRow['white_rating']}',
+            '{gameRow['black_rating']}',
+            '{gameRow['moves']}'
+        )
+        """,
+        DBPATH,
+    )
 
 
 # %% Database table creation
@@ -1002,6 +1040,65 @@ def createBoardsTable(dbPath, dropOld=False):
     q = f"""
     CREATE INDEX boardsBoardStrToMoveIdx
     ON boards(boardStr, toMove)
+    """
+    print(f"Success!")
+
+
+def createMovesTable(dbPath, dropOld=False):
+    # Drop old table if exists
+    if dropOld:
+        q = f"""
+        drop table if exists moves
+        """
+        executeSql(q, dbPath)
+
+    # Create table and indeces
+    q = f"""
+    create table moves(
+        gameId TEXT not null,
+        moveNum INTEGER not null,
+        oldBoardStr TEXT not null,
+        moveStr TEXT not null,
+        newBoardStr TEXT not null,
+        primary key (gameId asc, moveNum asc)
+    )
+    """
+    executeSql(q, dbPath)
+    q = f"""
+    CREATE INDEX movesIndex
+    ON moves(gameId, moveNum)
+    """
+    print(f"Success!")
+
+
+def createGamesTable(dbPath, dropOld=True):
+    # Drop old table if exists
+    if dropOld:
+        q = f"""
+        drop table if exists games
+        """
+        executeSql(q, dbPath)
+
+    # Create table and indeces
+    q = f"""
+    create table games(
+        gameId TEXT not null,
+        isRated integer not null,
+        turnCount integer not null,
+        winner text not null,
+        winCondition text not null,
+        increment text not null,
+        whiteRating integer not null,
+        blackRating integer not null,
+        movesStr TEXT not null,
+        primary key (gameId asc)
+
+    )
+    """
+    executeSql(q, dbPath)
+    q = f"""
+    CREATE INDEX gamesIndex
+    ON moves(gameId)
     """
     print(f"Success!")
 
