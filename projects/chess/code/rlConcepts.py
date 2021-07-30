@@ -290,12 +290,12 @@ def qLearning(env, num_episodes, discount_factor=1.0, alpha=0.6, epsilon=0.1):
             action = np.random.choice(
                 np.arange(len(action_probabilities)), p=action_probabilities
             )
-            print(f"action: {action}")
+            # print(f"action: {action}")
 
             # take action and get reward, transit to next state
             next_state, reward, done, _ = env.step(action)
-            env._render()
-            print(f"Next: {next_state}; reward: {reward}; done: {done}")
+            # env._render()
+            # print(f"Next: {next_state}; reward: {reward}; done: {done}")
 
             # Update statistics
             stats.episode_rewards[ith_episode] += reward
@@ -317,7 +317,28 @@ def qLearning(env, num_episodes, discount_factor=1.0, alpha=0.6, epsilon=0.1):
 
 
 # %%
-Q, stats = qLearning(env, 1)
+Q, stats = qLearning(env, 100000)
 # %%
 plot_episode_stats(stats)
+
+# %% Best path
+# while True:
+winds = np.zeros((7, 10))
+winds[:, [3, 4, 5, 8]] = 1
+winds[:, [6, 7]] = 2
+
+square = (3, 0)
+
+while square != (3, 7):
+    idx = int(f"{square[0]}{square[1]}")
+    bestDir = ["up", "right", "down", "left"][np.argmax(Q[idx])]
+    print(f"From square {square} best dir is {bestDir}")
+
+    bestStep = [(-1, 0), (0, 1), (1, 0), (0, -1)][np.argmax(Q[idx])]
+    square = (
+        max(square[0] + bestStep[0] - int(winds[square[0], square[1]]), 0),
+        max(square[1] + bestStep[1], 0),
+    )
+
+
 # %%
