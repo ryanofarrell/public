@@ -124,7 +124,11 @@ print(
 )
 
 # %% Save data to directory
-individualDf.to_csv(getRelativeFp(__file__, "../data/output/individualMedals.csv"))
-countryDf.to_csv(getRelativeFp(__file__, "../data/output/countryMedals.csv"))
+individualDf.to_csv(
+    getRelativeFp(__file__, "../data/output/individualMedals.csv"), index=False
+)
+countryDf.to_csv(
+    getRelativeFp(__file__, "../data/output/countryMedals.csv"), index=False
+)
 
 # %%
