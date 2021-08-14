@@ -41,7 +41,7 @@ Expanding your **scope** of perceived ability means increasing the number of peo
 Increasing the **scale** of your perceived ability means removing the communication inefficiency highlighted in the below image.
 
 {% include figure 
-    image_path="/assets/images/comm-ineff.png" 
+    image_path="/assets/images/comm-ineff.jpeg" 
     alt="Communication inefficiency" 
     caption="Communication inefficiency is the gap between your actual ability and your perceived ability" 
 %}
