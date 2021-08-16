@@ -44,6 +44,7 @@ Increasing the **scale** of your perceived ability means removing the communicat
     image_path="/assets/images/post-01/comm-ineff.jpeg" 
     alt="Communication inefficiency" 
     caption="Communication inefficiency is the gap between your actual ability and your perceived ability" 
+    class="align-center"
 %}
 
 When being considered for any new career opportunity, subconsciously there is some sort of composite score assigned to you based on your **perceived ability**. If a job is 80% Python, and you grade out at an F in Python perceived ability, you aren’t going to advance in that opportunity, even if your actual ability is an A. Once your **actual ability** outpaces your communication ability you are not maximizing your future opportunities, so focusing on perception produces a better ROI on your time.
