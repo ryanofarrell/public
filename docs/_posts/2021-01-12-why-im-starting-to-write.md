@@ -14,7 +14,7 @@ excerpt: I’m writing to learn some things, share more of my knowledge, and hop
 
 I recently was inspired to write more by the following tweet by Jack Butcher (a great person to follow):
 
-<blockquote class="twitter-tweet"><p lang="en" dir="ltr">The market doesn&#39;t see your ability, it sees your ability to communicate.<br><br>&quot;The world rewards the people who are best at communicating ideas, not the people with the best ideas.&quot; — <a href="https://twitter.com/david_perell?ref_src=twsrc%5Etfw">@david_perell</a> <a href="https://t.co/pGEGnduXRq">pic.twitter.com/pGEGnduXRq</a></p>&mdash; jckbtchr (@jackbutcher) <a href="https://twitter.com/jackbutcher/status/1345396017441734662?ref_src=twsrc%5Etfw">January 2, 2021</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+<blockquote class="twitter-tweet" align="center"><p lang="en" dir="ltr">The market doesn&#39;t see your ability, it sees your ability to communicate.<br><br>&quot;The world rewards the people who are best at communicating ideas, not the people with the best ideas.&quot; — <a href="https://twitter.com/david_perell?ref_src=twsrc%5Etfw">@david_perell</a> <a href="https://t.co/pGEGnduXRq">pic.twitter.com/pGEGnduXRq</a></p>&mdash; jckbtchr (@jackbutcher) <a href="https://twitter.com/jackbutcher/status/1345396017441734662?ref_src=twsrc%5Etfw">January 2, 2021</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
 
 <br>
 
