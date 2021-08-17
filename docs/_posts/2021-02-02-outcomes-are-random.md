@@ -7,7 +7,7 @@ tags:
     - outcomes
     - probability
 excerpt: Learn how to increase your odds of success by embracing the randomness that exists in the world.
-
+classes: wide
 ---
 
 This post illustrates how outcomes are caused by both **decisions**, which set the probability of each outcome, and exceptional (or unexceptional) **performance** within that probability distribution. The main points are:

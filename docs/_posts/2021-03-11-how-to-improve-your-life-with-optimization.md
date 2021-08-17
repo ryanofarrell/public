@@ -8,6 +8,8 @@ tags:
     - optimization
     - organizational effectiveness
 excerpt: Learn how to use optimization to improve professional and personal outcomes.
+
+classes: wide
 ---
 
 In this post you’ll get a quick primer on what optimization is, understand how fewer objectives lead to better outcomes, and be compelled to optimize your life for decision cost.

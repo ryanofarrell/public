@@ -9,7 +9,7 @@ tags:
     - professional development
     - writing
 excerpt: I’m writing to learn some things, share more of my knowledge, and hopefully in the process, make connections and solidify my understanding of the world.
-
+classes: wide
 ---
 
 I recently was inspired to write more by the following tweet by Jack Butcher (a great person to follow):
