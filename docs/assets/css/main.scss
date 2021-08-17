@@ -7,6 +7,10 @@
 @import "minimal-mistakes/skins/{{ site.minimal_mistakes_skin | default: 'default' }}"; // skin
 @import "minimal-mistakes"; // main partials
 
+// Max width for left or right aligned images
+$maxWidth: 300px;
+
+
 .author__avatar {
   display: table-cell;
   vertical-align: top;
@@ -48,4 +52,39 @@
     color: inherit;
     text-decoration: none;
   }
+}
+
+.align-left {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: $maxWidth;
+
+
+  @include breakpoint($small) {
+    float: left;
+    margin-right: 1em;
+  }
+}
+
+/* image align right */
+
+.align-right {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+  max-width: $maxWidth;
+
+  @include breakpoint($small) {
+    float: right;
+    margin-left: 1em;
+  }
+}
+
+/* image align center */
+
+.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 }
