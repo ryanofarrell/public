@@ -27,7 +27,6 @@ When considering the [sources of power](https://expertprogrammanagement.com/2017
     alt="5 types of power" 
     class="align-left"
     caption="The 5 types of power"
-    maxwidth="200px"
 
 %}
 
