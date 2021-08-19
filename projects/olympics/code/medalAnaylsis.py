@@ -324,6 +324,13 @@ fig.write_image(
 
 # fig.show()
 
+# TODO export as HTML and embed in website?
+fig.write_html(
+    getRelativeFp(__file__, "../viz/country_points.html"),
+    include_plotlyjs="cdn",
+    full_html=False,
+)
+
 # %% Top n medal points per pop, min 15 points
 # Countries with >= 15 points, sort, keep top n
 temp = countryPoints.loc[countryPoints["points"] >= countryPointMin].reset_index(
