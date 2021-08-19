@@ -1,6 +1,6 @@
 # %% Imports
 import pandas as pd
-from helpers import getRelativeFp
+from helpers import getRelativeFp, IMAGEPATH
 import plotly.express as px
 import pycountry
 from pycountry_convert import (
@@ -313,9 +313,11 @@ for country in topMedalCountries:
     )
     i += 1
 
+
+# Put image in blog images folder for post 6
 fig.write_image(
-    getRelativeFp(__file__, "../viz/country_points.png"),
-    format="png",
+    getRelativeFp(IMAGEPATH, "post-06/country_points.jpeg", upOneLevel=False),
+    format="jpeg",
     width=imgW,
     height=imgH,
 )
@@ -369,8 +371,8 @@ for country in temp["country"]:
     i += 1
 # fig.show()
 fig.write_image(
-    getRelativeFp(__file__, "../viz/country_points_perPop.png"),
-    format="png",
+    getRelativeFp(IMAGEPATH, "post-06/country_points_perPop.jpeg", upOneLevel=False),
+    format="jpeg",
     width=imgW,
     height=imgH,
 )
@@ -419,8 +421,8 @@ for country in temp["country"]:
 # fig.show()
 
 fig.write_image(
-    getRelativeFp(__file__, "../viz/countryEvent_points.png"),
-    format="png",
+    getRelativeFp(IMAGEPATH, "post-06/countryEvent_points.jpeg", upOneLevel=False),
+    format="jpeg",
     width=imgW,
     height=imgH,
 )
@@ -470,8 +472,10 @@ for country in temp["country"]:
 # fig.show()
 
 fig.write_image(
-    getRelativeFp(__file__, "../viz/countryEvent_points_perPop.png"),
-    format="png",
+    getRelativeFp(
+        IMAGEPATH, "post-06/countryEvent_points_perPop.jpeg", upOneLevel=False
+    ),
+    format="jpeg",
     width=imgW,
     height=imgH,
 )
@@ -498,8 +502,8 @@ fig.update_layout(showlegend=False)
 # fig.show()
 
 fig.write_image(
-    getRelativeFp(__file__, "../viz/continent_points.png"),
-    format="png",
+    getRelativeFp(IMAGEPATH, "post-06/continent_points.jpeg", upOneLevel=False),
+    format="jpeg",
     width=imgW,
     height=imgH,
 )
@@ -526,8 +530,8 @@ fig.update_layout(showlegend=False)
 # fig.show()
 
 fig.write_image(
-    getRelativeFp(__file__, "../viz/continent_points_perPop.png"),
-    format="png",
+    getRelativeFp(IMAGEPATH, "post-06/continent_points_perPop.jpeg", upOneLevel=False),
+    format="jpeg",
     width=imgW,
     height=imgH,
 )
@@ -549,8 +553,8 @@ fig.update_layout(title_text=f"Continent Points per Event, 2020 Tokyo Olympics")
 fig.update_xaxes(side="bottom")
 # fig.show()
 fig.write_image(
-    getRelativeFp(__file__, "../viz/contEvent_points.png"),
-    format="png",
+    getRelativeFp(IMAGEPATH, "post-06/contEvent_points.jpeg", upOneLevel=False),
+    format="jpeg",
     width=imgW,
     height=imgH,
 )
@@ -572,8 +576,8 @@ fig.update_layout(
 fig.update_xaxes(side="bottom")
 # fig.show()
 fig.write_image(
-    getRelativeFp(__file__, "../viz/contEvent_points_perPop.png"),
-    format="png",
+    getRelativeFp(IMAGEPATH, "post-06/contEvent_points_perPop.jpeg", upOneLevel=False),
+    format="jpeg",
     width=imgW,
     height=imgH,
 )
@@ -602,8 +606,8 @@ fig = px.bar(
 fig.update_xaxes(title_text="Medal Points")
 # fig.show()
 fig.write_image(
-    getRelativeFp(__file__, "../viz/chinaVsUsa.png"),
-    format="png",
+    getRelativeFp(IMAGEPATH, "post-06/chinaVsUsa.jpeg", upOneLevel=False),
+    format="jpeg",
     width=imgW,
     height=imgH,
 )
