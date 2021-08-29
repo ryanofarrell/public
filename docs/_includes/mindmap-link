@@ -1,0 +1,7 @@
+{% if include.url %}
+<a href="{{ include.url }}">[[{{ include.text }}]]</a>
+{% elsif include.concept %}
+<a href="/mindmap/{{ include.concept }}">[[{{ include.text }}]]</a>
+{% else %}
+[[{{include.text}}]]
+{% endif %}
