@@ -21,7 +21,7 @@ layout: default
     <h2>Linked Concepts</h2>
     {% for itm in site.data.mindmap %}
     <!-- Compare filename of item to filename of page (url w/out /mindmap/) -->
-    {% assign lowerToFile = itm.[0] | downcase %}
+    {% assign lowerToFile = itm[0] | downcase %}
     {% assign urlSize = page.url | size | minus: 10%}
     {% assign lowerPageFile = page.url | downcase | slice: 9, urlSize %}
 

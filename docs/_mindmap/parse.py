@@ -40,7 +40,7 @@ for f in concepts:
 def replaceAllLinksWithText(s: str, bolded: bool = False) -> str:
     "Replaces the mindmap link patters with the text from that pattern, optionally <b></b>"
 
-    textP = re.compile("text=[\x27\x22](.*)[\x27\x22]", flags=re.U)
+    textP = re.compile("text=[\x27\x22](.*?)[\x27\x22]", flags=re.U)
     newS = s
 
     for link in MINDMAPPATTERN.finditer(s):
@@ -54,6 +54,12 @@ def replaceAllLinksWithText(s: str, bolded: bool = False) -> str:
 
 # %% parse through data
 mindmap = defaultdict(lambda: defaultdict(lambda: defaultdict(list)))
+
+# TODO when there are multiple links to same file in same block,
+# only the first link gets the special treatment
+# Possible parse all links beforehand, extrack the toFile, then make a list of
+# strings of {% <x> %} that are to a specific toFile
+# str.replace those with a bolded version
 
 for fromTitle, details in data.items():
     fromUrl = f"/mindmap/{details['url']}"
