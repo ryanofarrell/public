@@ -18,7 +18,7 @@ layout: default
     {% endunless %}
     {{ content }}
 
-    <h2>Links</h2>
+    <h2>Linked Concepts</h2>
     {% for itm in site.data.mindmap %}
     <!-- Compare filename of item to filename of page (url w/out /mindmap/) -->
     {% assign lowerToFile = itm.[0] | downcase %}

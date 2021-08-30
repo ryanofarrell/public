@@ -1,5 +1,5 @@
 ---
-title: Test Concept \#3
+title: Test Concept 3
 layout: mindmap-concept
 
 
