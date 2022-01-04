@@ -96,14 +96,8 @@ While juvenile, the cartoon represents a culture of distrust and a lack of empat
 - You look at your manager and think about the day you get to them her you quit. All they do is keep you in the dark then dump huge projects on you with no context and a tight timeline. Then, they take your work and present it to leadership and get all the credit
     - **An empathetic view**: could it be the case that your manager actually shields you from a lot of really terrible work, and the stuff that is left over may be the best of the worst? Or that they have advocated for you to be able to present your projects to leadership, but leadership has such tight timelines that the ‘presentation’ becomes a 10-minute grilling session that would seriously affect the motivation of an individual contributor?
 
-So how do we bridge the gap between current state (a**holes and s**theads) and a more empathetic view? **Feedback loops and a commitment to understanding**.
+So how do we bridge the gap between current state (a\*\*holes and s\*\*theads) and a more empathetic view? **Feedback loops and a commitment to understanding**.
 
-{% include figure 
-    image_path="/assets/images/post-08/feedback-loop.jpeg" 
-    alt="Feedback loops improve EI" 
-    class="align-left"
-    caption="Feedback loops with commitments to understanding improve EI"
-%}
 
 Feedback loops are an immensely powerful tool for change. Organizations without feedback loops are doomed to remain stationary, whereas ones with feedback loops will inevitable evolve over time (not all feedback loops cause positive change, but that is a different conversation).
 
@@ -111,6 +105,13 @@ How do feedback loops build emotional intelligence? Consider this snippet from t
 
 > From a high level, the pattern used in this definition of emotional intelligence is **information gathering** (monitor emotion), **analyzing** (discriminate different emotions), and **decision making** (guide actions). You may notice that this pattern very much parallel’s the pattern of most data analyses: gather data, find insights, use insight to do something; this probably has something to do with the fact that our brains are very complicated computers, but I digress. - Me, 1,000 words ago
 > 
+
+{% include figure 
+    image_path="/assets/images/post-08/feedback-loop.jpeg" 
+    alt="Feedback loops improve EI" 
+    class="align-left"
+    caption="Feedback loops with commitments to understanding improve EI"
+%}
 
 Feedback loops are the unavoidable first step in this pattern: information gathering. People will not evolve unless they receive feedback that evolution is necessary; your manager will not change unless they receive feedback that their current method is causing problems; your team will not get better unless you start the hard conversation about performance.
 
