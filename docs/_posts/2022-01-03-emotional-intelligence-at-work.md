@@ -100,8 +100,8 @@ So how do we bridge the gap between current state (a**holes and s**theads) and a
 
 {% include figure 
     image_path="/assets/images/post-08/feedback-loop.jpeg" 
-    alt="Feedback loops imporve EI" 
-    class="align-right"
+    alt="Feedback loops improve EI" 
+    class="align-left"
     caption="Feedback loops with commitments to understanding improve EI"
 %}
 
