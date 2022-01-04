@@ -277,10 +277,10 @@ compress_html:
     envs: development
 
 # Collections: mind map
-collections:
-  mindmap:
-    output: true
-    permalink: /:collection/:name/
+# collections:
+#   mindmap:
+#     output: true
+#     permalink: /:collection/:name/
 
 
 # Defaults
@@ -304,10 +304,10 @@ defaults:
       layout: single
       author_profile: false
   # _mindmap
-  - scope:
-      path: ""
-      type: mindmap
-    values:
-      layout: single
-      author_profile: false
-      share: true
+  # - scope:
+  #     path: ""
+  #     type: mindmap
+  #   values:
+  #     layout: single
+  #     author_profile: false
+  #     share: true

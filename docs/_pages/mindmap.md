@@ -7,7 +7,7 @@ layout: search
 
 ---
 
-# test
+# Test
 
 {% for concept in site.mindmap %}
   {% include mindmap-link url=concept.url text=concept.title %}

@@ -5,8 +5,8 @@ main:
     url: /posts/
   - title: "About"
     url: /about/
-  - title: "Mind Map"
-    url: /mindmap/
+  # - title: "Mind Map"
+  #   url: /mindmap/
   # - title: "Tags"
   #   url: /tags/
   # - title: "Pages"
