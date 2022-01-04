@@ -1,7 +1,7 @@
 ---
 layout: single
 title:  "A&#42;&#42;holes and S&#42;&#42;theads: Emotional Intelligence in Corporate America"
-date:   2022-01-03 09:15:00 -0400
+date:   2022-01-03 21:15:00 -0400
 categories: posts
 tags:
     - organizational effectiveness
