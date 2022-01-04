@@ -1,0 +1,44 @@
+---
+layout: default
+---
+{% if page.header.overlay_color or page.header.overlay_image or page.header.image %}
+{% include page__hero.html %}
+{% endif %}
+
+{% if page.url != "/" and site.breadcrumbs %}
+{% unless paginator %}
+{% include breadcrumbs.html %}
+{% endunless %}
+{% endif %}
+
+<div id="main" role="main">
+  <div class="archive">
+    {% unless page.header.overlay_color or page.header.overlay_image %}
+    <h1 id="page-title" class="page__title">{{ page.title }}</h1>
+    {% endunless %}
+    {{ content }}
+
+    <h2>Linked Concepts</h2>
+    {% for itm in site.data.mindmap %}
+    <!-- Compare filename of item to filename of page (url w/out /mindmap/) -->
+    {% assign lowerToFile = itm[0] | downcase %}
+    {% assign urlSize = page.url | size | minus: 10%}
+    {% assign lowerPageFile = page.url | downcase | slice: 9, urlSize %}
+
+    <!-- If the item is the page in question: -->
+    {% if lowerToFile == lowerPageFile %}
+    <!-- The links are grouped by the page they come from -->
+    {% for fromTitle in itm[1] %}
+    <h4>{{fromTitle[0]}}</h4>
+
+    <!-- Add a link for each snippet in the source file list -->
+    {% for snipppet in fromTitle[1].snippets %}
+
+    <a href="{{fromTitle[1].fromUrl}}">{{snipppet}}</a> <br> <br>
+
+    {% endfor %}
+    {% endfor %}
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
