@@ -7,8 +7,11 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from collections import defaultdict
-from helpers import dfToTable, executeSql, getRelativeFp
+from helpers import dfToTable, executeSql, getRelativeFp, logger
 
+
+# %% Logging
+log = logger(getRelativeFp(__file__, "logs/chess.log"), 10, 20, True)
 # %% Constants
 FILES = ["a", "b", "c", "d", "e", "f", "g", "h"]
 RANKS = ["1", "2", "3", "4", "5", "6", "7", "8"]
@@ -147,6 +150,8 @@ SQUARES: list[squareType] = [
 
 PIECENAME = Literal["P", "R", "N", "B", "Q", "K"]
 DBPATH = getRelativeFp(__file__, "../data/db/chess.db")
+
+BOARDSCORES: dict[str, int] = {}
 
 
 # %% Exceptions
@@ -485,7 +490,7 @@ def getSquareDict() -> squareDictType:
 
 
 SQUAREDICT = getSquareDict()
-print(SQUAREDICT)
+# log.debug(SQUAREDICT)
 
 
 # %% More complex functions
@@ -850,20 +855,87 @@ def getValidMoves(
 
 
 # %% Score board
-def getScore(board: boardDict, color: Literal["w", "b"]) -> float:
+# @log.timeFuncInfo
+def getScore(board: boardDict, toMove: Literal["w", "b"]) -> tuple[pd.DataFrame, int]:
     """Gets score of a board."""
 
-    score = 0
-    for square in board:
-        piece = board[square]
-        if isinstance(piece, empty):
-            continue
-        if piece.color == color:
-            score += piece.value
-        else:
-            score -= piece.value
+    scores = pd.DataFrame(index=[x for x in reversed(RANKS)], columns=FILES, data=0)
+    boardWithColor = f"{getOtherColor(toMove)} | {board2Str(board)}"
+    log.debug(f"toMove: {toMove}")
+    # For any opponent color piece with >1 attack on it:
+    # Value for me = +(value of piece under attack)
+    #   - (value of n lowest pieces attacking it for n number defending)
+    #  + (value of m lowest pieces defending it for m-1 number attacking)
 
-    return score
+    # Example, N attacking Q defended by P
+    #   +9 - [3] + 0 = +6
+
+    # Example NPB attacking P defended by NP
+    #  +1 - [1, 3] + [3 + 1] = +1
+    attackDict = defaultdict(lambda: {"w": [], "b": [], "value": 0, "net": 0, "pieceColor": None})
+    pieceValuesOnBoard = {"w": 0, "b": 0}
+    for square, p in board.items():
+        if isinstance(p, empty):
+            continue
+        pieceValuesOnBoard[p.color] += p.value
+        attackDict[square]["value"] = p.value
+        attackDict[square]["pieceColor"] = p.color
+        if p.name == "P":
+            for sq in SQUAREDICT[square][str(p)]:
+                attackDict[sq][p.color].append(p.value)
+        elif p.name == "N":
+            for sq in SQUAREDICT[square]["knights"]:
+                attackDict[sq][p.color].append(p.value)
+
+        elif p.name == "B":
+            for line in SQUAREDICT[square]["diagonals"]:
+                for sq in line:
+                    attackDict[sq][p.color].append(p.value)
+                    if isinstance(board[sq], type(p)):
+                        break
+        elif p.name == "R":
+            for line in SQUAREDICT[square]["straights"]:
+                for sq in line:
+                    attackDict[sq][p.color].append(p.value)
+                    if isinstance(board[sq], type(p)):
+                        break
+        elif p.name == "Q":
+            for line in SQUAREDICT[square]["diagonals"] + SQUAREDICT[square]["straights"]:
+                for sq in line:
+                    attackDict[sq][p.color].append(p.value)
+                    if isinstance(board[sq], type(p)):
+                        break
+        elif p.name == "K":
+            for sq in SQUAREDICT[square]["kings"]:
+                attackDict[sq][p.color].append(p.value)
+
+    for square, stuff in attackDict.items():
+        if stuff["value"] == 0:
+            continue
+        if (len(stuff["w"]) == 0) & (len(stuff["b"]) == 0):
+            continue
+        if stuff["pieceColor"] == toMove:
+            continue
+        log.debug(f"{square}, {stuff}")
+        attacks = sorted(stuff[toMove])
+        defends = sorted(stuff[getOtherColor(toMove)])
+        attackCnt = len(attacks)
+        defendCnt = len(defends)
+        log.debug(f"attacks: {attacks}, defends: {defends}")
+        if attackCnt == 0:
+            continue
+        nv = -sum(attacks[:defendCnt]) + sum(defends[: attackCnt - 1])
+        log.debug(f"nv: {nv}")
+        if (nv > 0) or (defendCnt == 0):
+            attackDict[square]["net"] = stuff["value"]
+            scores[square[0]][square[1]] += stuff["value"]
+            log.debug(f"{square} value {stuff['value']} attacks: {attacks}, defends: {defends}, net: {nv}")
+
+    log.debug(pieceValuesOnBoard)
+
+    boardVal = pieceValuesOnBoard[toMove] - pieceValuesOnBoard[getOtherColor(toMove)]
+
+    return scores, boardVal
 
 
 # %% Chess game class
@@ -956,106 +1028,7 @@ class chessGame(object):
             self.winner = getOtherColor(self.toMove)
 
     def show(self):
-
-        scores = pd.DataFrame(index=[x for x in reversed(RANKS)], columns=FILES, data=0)
-        takes = pd.DataFrame(index=[x for x in reversed(RANKS)], columns=FILES, data=0)
-
-        # For any opponent color piece with >1 attack on it:
-        # Value for me = +(value of piece under attack)
-        #   - (value of n lowest pieces attacking it for n number defending)
-        #  + (value of m lowest pieces defending it for m-1 number attacking)
-
-        # Example, N attacking Q defended by P
-        #   +9 - [3] + 0 = +6
-
-        # Example NPB attacking P defended by NP
-        #  +1 - [1, 3] + [3 + 1] = +1
-        attackDict = defaultdict(lambda: {"w": [], "b": [], "value": 0, "net": 0, "pieceColor": None})
-        # for validMove in self.validMoves:
-        #     if validMove["special"] not in (None, "promoteQ", "enpassant", "longCastle", "shortCastle"):
-        #         continue
-        #     attackedPiece = self.board[validMove["newSquare"]]
-        #     attackingPiece = self.board[validMove["oldSquare"]]
-        #     if isinstance(attackedPiece, empty):
-        #         continue
-        #     if isinstance(attackingPiece, empty):
-        #         continue
-        #     print(validMove)
-        #     print(attackingPiece, attackedPiece)
-        #     attackDict[validMove["newSquare"]]["attacks"].append(attackingPiece.value)
-        #     attackDict[validMove["newSquare"]]["defends"].append(attackingPiece.value)
-
-        pieceValuesOnBoard = {"w": 0, "b": 0}
-        for square, p in self.board.items():
-            if isinstance(p, empty):
-                continue
-            pieceValuesOnBoard[p.color] += p.value
-            mult = [1, -1][p.color == self.toMove]
-            attackDict[square]["value"] = p.value
-            attackDict[square]["pieceColor"] = p.color
-            if p.name == "P":
-                for sq in SQUAREDICT[square][str(p)]:
-                    attackDict[sq][p.color].append(p.value)
-                    # scores[sq[0]][sq[1]] += piece.value * mult
-                    # takes[sq[0]][sq[1]] += mult
-            elif p.name == "N":
-                for sq in SQUAREDICT[square]["knights"]:
-                    attackDict[sq][p.color].append(p.value)
-                    # scores[sq[0]][sq[1]] += piece.value * mult
-                    # takes[sq[0]][sq[1]] += mult
-
-            elif p.name == "B":
-                for line in SQUAREDICT[square]["diagonals"]:
-                    for sq in line:
-                        attackDict[sq][p.color].append(p.value)
-                        # scores[sq[0]][sq[1]] += piece.value * mult
-                        # takes[sq[0]][sq[1]] += mult
-                        if isinstance(self.board[sq], type(p)):
-                            break
-            elif p.name == "R":
-                for line in SQUAREDICT[square]["straights"]:
-                    for sq in line:
-                        attackDict[sq][p.color].append(p.value)
-                        # scores[sq[0]][sq[1]] += piece.value * mult
-                        # takes[sq[0]][sq[1]] += mult
-                        if isinstance(self.board[sq], type(p)):
-                            break
-            elif p.name == "Q":
-                for line in SQUAREDICT[square]["diagonals"] + SQUAREDICT[square]["straights"]:
-                    for sq in line:
-                        print(sq)
-                        attackDict[sq][p.color].append(p.value)
-                        # scores[sq[0]][sq[1]] += piece.value * mult
-                        # takes[sq[0]][sq[1]] += mult
-                        if isinstance(self.board[sq], type(p)):
-                            break
-            elif p.name == "K":
-                for sq in SQUAREDICT[square]["kings"]:
-                    attackDict[sq][p.color].append(p.value)
-                    # scores[sq[0]][sq[1]] += piece.value * mult
-                    # takes[sq[0]][sq[1]] += mult
-            # print(dict(attackDict))
-
-        for square, stuff in attackDict.items():
-            if stuff["value"] == 0:
-                continue
-            if (len(stuff["w"]) == 0) & (len(stuff["b"]) == 0):
-                continue
-            if stuff["pieceColor"] == self.toMove:
-                continue
-            print(square, stuff)
-            attacks = sorted(stuff[self.toMove])
-            defends = sorted(stuff[getOtherColor(self.toMove)])
-            attackCnt = len(attacks)
-            defendCnt = len(defends)
-
-            if attackCnt == 0:
-                continue
-            nv = stuff["value"] - sum(attacks[:defendCnt]) + sum(defends[: attackCnt - 1])
-            attackDict[square]["net"] = nv
-            scores[square[0]][square[1]] += nv
-            print(f"{square} value {stuff['value']} attacks: {attacks}, defends: {defends}, net: {nv}")
-
+        scores, boardVal = getScore(self.board, self.toMove)
         fig = px.imshow(scores.values, x=FILES, y=[x for x in reversed(RANKS)])
         for x in range(7):
             fig.add_hline(x + 0.5, line_width=1, line_color="black")
@@ -1078,12 +1051,32 @@ class chessGame(object):
                 sizex=0.125,
                 sizey=0.125,
             )
+
+        netScore = boardVal + scores.values.sum()
         fig.update_layout(
-            title_text=f"Score: {sum(sum(scores.values))}, To move: {self.toMove}, Waiting: {self.waiting}, Winner: {self.winner}",
+            title_text=f"Score: {netScore}, To move: {self.toMove}, Waiting: {self.waiting}, Winner: {self.winner}",
         )
         fig.show()
 
-        # return out
+    def recMove(self, depth=2):
+        "Recommend a move"
+
+        # Get valid moves, ensure there are some
+        if len(self.validMoves) == 0:
+            raise MoveError("No valid moves")
+
+        # Get best move
+        for move, board in zip(self.validMoves, self.validBoards.values()):
+            boardWithColor = f"{getOtherColor(self.toMove)} | {board2Str(board)}"
+            try:
+                netScore = BOARDSCORES[boardWithColor]
+            except KeyError:
+                log.debug(board2Str(board))
+                scores, boardVal = getScore(board, getOtherColor(self.toMove))
+                netScore = boardVal + scores.values.sum()
+                BOARDSCORES[boardWithColor] = netScore
+            log.info(f"{netScore} | {move2Str(move)}")
+            # log.info(netScore)
 
 
 # %% Transcribe game into engine
@@ -1192,7 +1185,7 @@ def movesStrIntoDf(movesStr: str) -> pd.DataFrame:
 
 def parseGameRow(gameRow: pd.Series, updateEvery: int = 50):
     if gameRow.name % updateEvery == 0:
-        print(f"On game {gameRow.name}")
+        log.info(f"On game {gameRow.name}")
 
     moveDf = movesStrIntoDf(gameRow["moves"])
 
@@ -1220,10 +1213,10 @@ def parseGameRow(gameRow: pd.Series, updateEvery: int = 50):
     if type(gameRow["mateColor"]) == str:
         if type(game.winner) == str:
             if game.winner != gameRow["mateColor"]:
-                print(game)
+                log.info(game)
                 raise GameError(f"Engine has winner as {game.winner}, data has {gameRow['mateColor']}")
     else:
-        # print(f"Finished entirety of moves with no outcome")
+        # log.info(f"Finished entirety of moves with no outcome")
         pass
 
     out = pd.DataFrame(
@@ -1254,7 +1247,7 @@ def parseGameRow(gameRow: pd.Series, updateEvery: int = 50):
     )
 
 
-# %% Database table creation
+# Database table creation
 def createBoardsTable(dbPath, dropOld=False):
     """
     Creates table 'boards', mapping moves to board layout.
@@ -1293,7 +1286,7 @@ def createBoardsTable(dbPath, dropOld=False):
     CREATE INDEX boardsBoardStrToMoveIdx
     ON boards(boardStr, toMove)
     """
-    print(f"Success!")
+    log.info(f"Success!")
 
 
 def createMovesTable(dbPath, dropOld=False):
@@ -1320,7 +1313,7 @@ def createMovesTable(dbPath, dropOld=False):
     CREATE INDEX movesIndex
     ON moves(gameId, moveNum)
     """
-    print(f"Success!")
+    log.info(f"Success!")
 
 
 def createGamesTable(dbPath, dropOld=True):
@@ -1352,7 +1345,7 @@ def createGamesTable(dbPath, dropOld=True):
     CREATE INDEX gamesIndex
     ON moves(gameId)
     """
-    print("Success!")
+    log.info("Success!")
 
 
 # %% Main
@@ -1369,18 +1362,19 @@ if __name__ == "__main__":
     game.move("e7", "e5")
     game.move("g1", "f3")
     game.move("b8", "c6")
-    game.move("d2", "d4")
-    game.move("d8", "h4")
-    game.move("f3", "h4")
+    game.move("f1", "c4")
+    game.move("g8", "f6")
+    game.move("f3", "g5")
+    game.move("d7", "d5")
+    game.move("e4", "d5")
+    game.move("f6", "d5")
+    game.move("g5", "f7")
+    game.move("e8", "f7")
+    # game.move("d2", "d4")
+    game.recMove()
     game.show()
+    # game.move("d5", "f4")
 
-    # game.move("f7", "f5")
-    # game.move("e4", "f5")
-    # game.move("g7", "g6")
-    # game.move("f5", "g6")
-    # game.move("g6", "h7")
-    # game.move("e5", "e4")
-    # game.move("d2", "d3")
     # game.move("e4", "d3")
     # moves = pd.DataFrame(game.validMoves)
     # game.move("h7", "g8", "Q")
@@ -1400,9 +1394,9 @@ if __name__ == "__main__":
 
     # game.move("g8", "g6")
     # game.move("e5", "e4")
-    # print(game)
+    # log.info(game)
     # game.move("c8", "d7")
-    # print(game)
-    # print(game.prevMoves)
+    # log.info(game)
+    # log.info(game.prevMoves)
 
 # %%
