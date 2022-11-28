@@ -5,7 +5,8 @@ from typing import List, Literal, Tuple, TypedDict, Union
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
+
+# import plotly.graph_objects as go
 from collections import defaultdict
 from helpers import dfToTable, executeSql, getRelativeFp, logger
 
@@ -182,9 +183,10 @@ class piece(object):
     def __init__(self, color, name: PIECENAME, hasMoved=False):
         assert color in ["b", "w"], "Invalid color"
         assert name in ["K", "Q", "B", "N", "R", "P"], "Invalid name"
-        self.color = color
+        self.color: Literal["w", "b"] = color
         self.name: PIECENAME = name
-        self.hasMoved = hasMoved
+        self.hasMoved: bool = hasMoved
+        self.value: int
         if name == "K":
             self.value = 100
         elif name == "Q":
@@ -200,6 +202,14 @@ class piece(object):
 
     def __repr__(self):
         return self.color + self.name
+
+
+# %%
+class attackDictContents(TypedDict):
+    w: list[int]
+    b: list[int]
+    value: int
+    pieceColor: str | None
 
 
 # %% Database encoding functions
@@ -260,7 +270,7 @@ def str2Square(s: str) -> Union[empty, piece]:
         return empty()
     else:  # If there is something
         assert len(s) == 5, "should only be 5 characters for encoding a piece"
-        return piece(color=s[2], name=s[3], hasMoved=s[4] == "T")
+        return piece(color=s[2], name=s[3], hasMoved=s[4] == "T")  # type: ignore
 
 
 # Board encoding to str and back
@@ -279,7 +289,7 @@ def str2Board(s: str) -> boardDict:
         square = s[:2]
         assert square in SQUARES, square
         # assert isinstance(square, squareType), "Not a square"
-        out[square] = str2Square(s)
+        out[square] = str2Square(s)  # type: ignore
 
     return out
 
@@ -856,11 +866,15 @@ def getValidMoves(
 
 # %% Score board
 # @log.timeFuncInfo
-def getScore(board: boardDict, toMove: Literal["w", "b"]) -> tuple[pd.DataFrame, int]:
-    """Gets score of a board."""
+def getScore(board: boardDict, toMove: Literal["w", "b"], prevMoves: list[moveDict]) -> tuple[pd.DataFrame, int]:
+    """Gets score of a board. Returns everything where the perspective of 'toMove' is positive.
 
+    E.g.:
+    """
+
+    # TODO how to handle split attacks (e.g. knight shouldn't get both)
     scores = pd.DataFrame(index=[x for x in reversed(RANKS)], columns=FILES, data=0)
-    boardWithColor = f"{getOtherColor(toMove)} | {board2Str(board)}"
+    # boardWithColor = f"{getOtherColor(toMove)} | {board2Str(board)}"
     log.debug(f"toMove: {toMove}")
     # For any opponent color piece with >1 attack on it:
     # Value for me = +(value of piece under attack)
@@ -872,7 +886,19 @@ def getScore(board: boardDict, toMove: Literal["w", "b"]) -> tuple[pd.DataFrame,
 
     # Example NPB attacking P defended by NP
     #  +1 - [1, 3] + [3 + 1] = +1
-    attackDict = defaultdict(lambda: {"w": [], "b": [], "value": 0, "net": 0, "pieceColor": None})
+
+    # Handle checks - if is in check, only allow moves that get out of check
+    if isInCheck(board, toMove):
+        validMoves = getValidMoves(board, toMove, prevMoves)[0]
+        log.debug(f"{toMove} is in check, only considering {len(validMoves)} valid moves")
+        if len(validMoves) == 0:
+            for col in scores.columns:
+                scores[col] = 10
+            return scores, 1000
+
+    attackDict: dict[squareType, attackDictContents] = defaultdict(
+        lambda: {"w": [], "b": [], "value": 0, "pieceColor": None}
+    )
     pieceValuesOnBoard = {"w": 0, "b": 0}
     for square, p in board.items():
         if isinstance(p, empty):
@@ -916,18 +942,17 @@ def getScore(board: boardDict, toMove: Literal["w", "b"]) -> tuple[pd.DataFrame,
             continue
         if stuff["pieceColor"] == toMove:
             continue
-        log.debug(f"{square}, {stuff}")
         attacks = sorted(stuff[toMove])
         defends = sorted(stuff[getOtherColor(toMove)])
         attackCnt = len(attacks)
         defendCnt = len(defends)
-        log.debug(f"attacks: {attacks}, defends: {defends}")
         if attackCnt == 0:
             continue
-        nv = -sum(attacks[:defendCnt]) + sum(defends[: attackCnt - 1])
+        log.debug(f"{square}, {stuff}")
+        log.debug(f"attacks: {attacks}, defends: {defends}")
+        nv = stuff["value"] - sum(attacks[:defendCnt]) + sum(defends[: attackCnt - 1])
         log.debug(f"nv: {nv}")
         if (nv > 0) or (defendCnt == 0):
-            attackDict[square]["net"] = stuff["value"]
             scores[square[0]][square[1]] += stuff["value"]
             log.debug(f"{square} value {stuff['value']} attacks: {attacks}, defends: {defends}, net: {nv}")
 
@@ -1028,7 +1053,7 @@ class chessGame(object):
             self.winner = getOtherColor(self.toMove)
 
     def show(self):
-        scores, boardVal = getScore(self.board, self.toMove)
+        scores, boardVal = getScore(self.board, self.toMove, self.prevMoves)
         fig = px.imshow(scores.values, x=FILES, y=[x for x in reversed(RANKS)])
         for x in range(7):
             fig.add_hline(x + 0.5, line_width=1, line_color="black")
@@ -1052,14 +1077,15 @@ class chessGame(object):
                 sizey=0.125,
             )
 
-        netScore = boardVal + scores.values.sum()
+        netScore = (boardVal + scores.values.sum()) * ([-1, 1][self.toMove == "w"])
+        # netScore *= 1 if self.toMove == "w" else -1
         fig.update_layout(
             title_text=f"Score: {netScore}, To move: {self.toMove}, Waiting: {self.waiting}, Winner: {self.winner}",
         )
         fig.show()
 
     def recMove(self, depth=2):
-        "Recommend a move"
+        "Recommend a move. All scores are in"
 
         # Get valid moves, ensure there are some
         if len(self.validMoves) == 0:
@@ -1072,11 +1098,15 @@ class chessGame(object):
                 netScore = BOARDSCORES[boardWithColor]
             except KeyError:
                 log.debug(board2Str(board))
-                scores, boardVal = getScore(board, getOtherColor(self.toMove))
+                scores, boardVal = getScore(board, getOtherColor(self.toMove), self.prevMoves)
                 netScore = boardVal + scores.values.sum()
+                netScore = boardVal + scores.values.sum()  # * ([-1, 1][self.toMove == "w"])
                 BOARDSCORES[boardWithColor] = netScore
             log.info(f"{netScore} | {move2Str(move)}")
             # log.info(netScore)
+            # if there is a M1 (board value > 100), return that move
+            if netScore > 100:
+                return move
 
 
 # %% Transcribe game into engine
@@ -1356,23 +1386,30 @@ if __name__ == "__main__":
     # df.apply(lambda x: movesIntoGame(x["moves"], x["mateColor"], x.name), axis=1)
 
     # movesStr = df.iloc[226]["moves"]
-
+    # Simple M3 blunders abound
     game = chessGame()
-    game.move("e2", "e4")
+    game.move("f2", "f3")
     game.move("e7", "e5")
-    game.move("g1", "f3")
-    game.move("b8", "c6")
-    game.move("f1", "c4")
-    game.move("g8", "f6")
-    game.move("f3", "g5")
-    game.move("d7", "d5")
-    game.move("e4", "d5")
-    game.move("f6", "d5")
-    game.move("g5", "f7")
-    game.move("e8", "f7")
-    # game.move("d2", "d4")
-    game.recMove()
+    game.move("g2", "g4")
+    print(game.recMove())
     game.show()
+    # game.move("d8", "h4")
+
+    # Other game
+    # game.move("e7", "e5")
+    # game.move("g1", "f3")
+    # game.move("b8", "c6")
+    # game.move("f1", "c4")
+    # game.move("g8", "f6")
+    # game.move("f3", "g5")
+    # game.move("d7", "d5")
+    # game.move("e4", "d5")
+    # game.move("f6", "d5")
+    # game.move("g5", "f7")
+    # game.move("e8", "f7")
+    # game.move("d1", "g4")
+    # game.recMove()
+    # game.show()
     # game.move("d5", "f4")
 
     # game.move("e4", "d3")
