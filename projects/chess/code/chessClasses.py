@@ -1102,7 +1102,9 @@ class chessGame(object):
                 netScore = boardVal + scores.values.sum()
                 netScore = boardVal + scores.values.sum()  # * ([-1, 1][self.toMove == "w"])
                 BOARDSCORES[boardWithColor] = netScore
-            log.info(f"{netScore} | {move2Str(move)}")
+            log.info(
+                f"From {self.toMove} persp: {move2Str(move)} results in {getOtherColor(self.toMove)} score of {netScore}"
+            )
             # log.info(netScore)
             # if there is a M1 (board value > 100), return that move
             if netScore > 100:
@@ -1380,36 +1382,31 @@ def createGamesTable(dbPath, dropOld=True):
 
 # %% Main
 if __name__ == "__main__":
-    # df = pd.read_csv(getRelativeFp(__file__, "../data/input/games.csv"))
-    # df["mateColor"] = None
-    # df.loc[df["victory_status"] == "mate", "mateColor"] = df["winner"].str[0]
-    # df.apply(lambda x: movesIntoGame(x["moves"], x["mateColor"], x.name), axis=1)
-
-    # movesStr = df.iloc[226]["moves"]
-    # Simple M3 blunders abound
-    game = chessGame()
-    game.move("f2", "f3")
-    game.move("e7", "e5")
-    game.move("g2", "g4")
-    print(game.recMove())
-    game.show()
-    # game.move("d8", "h4")
+    # Simple M1 blunders abound
+    # game = chessGame()
+    # game.move("f2", "f3")
+    # game.move("e7", "e5")
+    # game.move("g2", "g4")
+    # print(game.recMove())
+    # game.show()
 
     # Other game
-    # game.move("e7", "e5")
-    # game.move("g1", "f3")
-    # game.move("b8", "c6")
-    # game.move("f1", "c4")
-    # game.move("g8", "f6")
-    # game.move("f3", "g5")
-    # game.move("d7", "d5")
-    # game.move("e4", "d5")
-    # game.move("f6", "d5")
-    # game.move("g5", "f7")
-    # game.move("e8", "f7")
-    # game.move("d1", "g4")
-    # game.recMove()
-    # game.show()
+    game = chessGame()
+    game.move("e2", "e4")
+    game.move("e7", "e5")
+    game.move("g1", "f3")
+    game.move("b8", "c6")
+    game.move("f1", "c4")
+    game.move("g8", "f6")
+    game.move("f3", "g5")
+    game.move("d7", "d5")
+    game.move("e4", "d5")
+    game.move("f6", "d5")
+    game.move("g5", "f7")
+    game.move("e8", "f7")
+    game.move("d1", "g4")
+    game.recMove()
+    game.show()
     # game.move("d5", "f4")
 
     # game.move("e4", "d3")
