@@ -16,74 +16,74 @@ log = logger(getRelativeFp(__file__, "logs/chess.log"), 10, 20, True)
 # %% Constants
 FILES = ["a", "b", "c", "d", "e", "f", "g", "h"]
 RANKS = ["1", "2", "3", "4", "5", "6", "7", "8"]
-squareType = Literal[
-    "a1",
-    "a2",
-    "a3",
-    "a4",
-    "a5",
-    "a6",
-    "a7",
-    "a8",
-    "b1",
-    "b2",
-    "b3",
-    "b4",
-    "b5",
-    "b6",
-    "b7",
-    "b8",
-    "c1",
-    "c2",
-    "c3",
-    "c4",
-    "c5",
-    "c6",
-    "c7",
-    "c8",
-    "d1",
-    "d2",
-    "d3",
-    "d4",
-    "d5",
-    "d6",
-    "d7",
-    "d8",
-    "e1",
-    "e2",
-    "e3",
-    "e4",
-    "e5",
-    "e6",
-    "e7",
-    "e8",
-    "f1",
-    "f2",
-    "f3",
-    "f4",
-    "f5",
-    "f6",
-    "f7",
-    "f8",
-    "g1",
-    "g2",
-    "g3",
-    "g4",
-    "g5",
-    "g6",
-    "g7",
-    "g8",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "h7",
-    "h8",
-]
-squareType = str
-SQUARES: list[squareType] = [
+# str = Literal[
+#     "a1",
+#     "a2",
+#     "a3",
+#     "a4",
+#     "a5",
+#     "a6",
+#     "a7",
+#     "a8",
+#     "b1",
+#     "b2",
+#     "b3",
+#     "b4",
+#     "b5",
+#     "b6",
+#     "b7",
+#     "b8",
+#     "c1",
+#     "c2",
+#     "c3",
+#     "c4",
+#     "c5",
+#     "c6",
+#     "c7",
+#     "c8",
+#     "d1",
+#     "d2",
+#     "d3",
+#     "d4",
+#     "d5",
+#     "d6",
+#     "d7",
+#     "d8",
+#     "e1",
+#     "e2",
+#     "e3",
+#     "e4",
+#     "e5",
+#     "e6",
+#     "e7",
+#     "e8",
+#     "f1",
+#     "f2",
+#     "f3",
+#     "f4",
+#     "f5",
+#     "f6",
+#     "f7",
+#     "f8",
+#     "g1",
+#     "g2",
+#     "g3",
+#     "g4",
+#     "g5",
+#     "g6",
+#     "g7",
+#     "g8",
+#     "h1",
+#     "h2",
+#     "h3",
+#     "h4",
+#     "h5",
+#     "h6",
+#     "h7",
+#     "h8",
+# ]
+# str = str
+SQUARES: list[str] = [
     "a1",
     "a2",
     "a3",
@@ -206,11 +206,11 @@ class piece(object):
 
 
 # %%
-class attackDictContents(TypedDict):
-    w: list[int]
-    b: list[int]
-    value: int
-    pieceColor: str | None
+# class attackDictContents(TypedDict):
+#     w: list[int]
+#     b: list[int]
+#     value: int
+#     pieceColor: str | None
 
 
 # %% Database encoding functions
@@ -219,7 +219,7 @@ class moveDict(TypedDict):
     piece: str
     oldSquare: str
     newSquare: str
-    special: Union[None, str]
+    special: None | str
 
 
 class potentialMoveDict(TypedDict):
@@ -227,15 +227,15 @@ class potentialMoveDict(TypedDict):
     piece: str
     oldSquare: str
     potentialNewSquare: str
-    special: Union[None, str]
+    special: None | str
 
 
-boardDict = dict[squareType, empty | piece]
+# dict[str, empty | piece] = dict[str, empty | piece]
 
 
 # Move encoding to str and back
 def move2Str(move: moveDict) -> str:
-    "Encodes a move into a str for storage in db"
+    "Encodes a move into a str."
     out = move["piece"] + move["oldSquare"] + move["newSquare"]
     if move["special"] is None:
         pass
@@ -245,7 +245,7 @@ def move2Str(move: moveDict) -> str:
 
 
 def str2Move(s: str) -> moveDict:
-    "Parses a str to get a move dict, keys=piece, oldSquare, newSquare, special"
+    "Parses a str to get a move dict"
     out: moveDict = {
         "piece": s[:2],
         "oldSquare": s[2:4],
@@ -265,7 +265,7 @@ def square2Str(squareObj: empty | piece) -> str:
     return squareObj.color + squareObj.name + str(squareObj.hasMoved)[0]
 
 
-def str2Square(s: str) -> Union[empty, piece]:
+def str2Square(s: str) -> empty | piece:
     "Parses a str to get a square object (empty or piece)"
     if len(s) == 2:  # If empty square, init empty
         return empty()
@@ -275,21 +275,21 @@ def str2Square(s: str) -> Union[empty, piece]:
 
 
 # Board encoding to str and back
-def board2Str(board: boardDict) -> str:
+def board2Str(board: dict[str, empty | piece]) -> str:
     "Encodes a board into a string format for storage in db"
     boardStr = " ".join([s + square2Str(board[s]) for s in board])
     return boardStr
 
 
-def str2Board(s: str) -> boardDict:
+def str2Board(s: str) -> dict[str, empty | piece]:
     "Parses a string, returning a dict of objects of current game state"
     boardList = s.split()
     assert len(boardList) == 64, boardList
-    out: boardDict = {}
+    out: dict[str, empty | piece] = {}
     for s in boardList:
         square = s[:2]
         assert square in SQUARES, square
-        # assert isinstance(square, squareType), "Not a square"
+        # assert isinstance(square, str), "Not a square"
         out[square] = str2Square(s)  # type: ignore
 
     return out
@@ -315,41 +315,13 @@ def str2Boards(s: str) -> List[dict]:
     return [str2Board(b) for b in s.split(",")]
 
 
-# %% Getting boards dict from DB
-# TODO this is such a big table cause of the strings...how to make smaller?
-# def getBoardsDict() -> dict:
-#     boards = readSql("select * from boards", DBPATH)
-#     boardsDict = {}
-
-#     def addToDict(row):
-#         validMoves = str2Moves(row["validMovesStr"])
-#         validBoardsList = str2Boards(row["validBoardsStr"])
-#         validBoardsDict = {}
-#         for move, board in zip(validMoves, validBoardsList):
-#             validBoardsDict[move2Str(move)] = board
-#         boardsDict[(row["boardStr"], row["toMove"])] = {
-#             "validMoves": validMoves,
-#             "validBoards": validBoardsDict,
-#         }
-
-#     boards.apply(lambda row: addToDict(row), axis=1)
-
-#     return boardsDict
-
-
-# BOARDSDICT = getBoardsDict()
-
-
-# %% Todos
-# TODO a lot of this is repeated, especially openings. Save in DB?
-
 # %% Functions
-def isLastRank(color: Literal["w", "b"], s: squareType) -> bool:
+def isLastRank(color: Literal["w", "b"], s: str) -> bool:
     "Is square s the last rank aka promotion time?"
     return int(s[1]) - [7, 0][color == "b"] == 1
 
 
-def getKingSquare(board: boardDict, color: Literal["w", "b"]) -> squareType:
+def getKingSquare(board: dict[str, empty | piece], color: Literal["w", "b"]) -> str:
     "Returns the square in which the king is located"
 
     for s in SQUARES:
@@ -359,7 +331,7 @@ def getKingSquare(board: boardDict, color: Literal["w", "b"]) -> squareType:
     raise ValueError(f"No king square for {color}")
 
 
-def getRelativeLoc(color: Literal["w", "b"], loc: squareType, addRank: int, addFile: int) -> squareType:
+def getRelativeLoc(color: Literal["w", "b"], loc: str, addRank: int, addFile: int) -> str | None:
     """Return the name of a cell that is the specified increment from loc.
     Always is from the perspective of the specified color, so black +1 rank is closer to 1
 
@@ -376,6 +348,8 @@ def getRelativeLoc(color: Literal["w", "b"], loc: squareType, addRank: int, addF
     Returns:
 
         str -- initial location + specified ranks + files
+
+    May return None if the location is off the board.
     """
     if color == "b":
         mult = -1
@@ -387,12 +361,12 @@ def getRelativeLoc(color: Literal["w", "b"], loc: squareType, addRank: int, addF
     relRank = str(int(locRank) + addRank * mult)
     relFile = chr(ord(locFile) + addFile * mult)
 
-    out: squareType = relFile + relRank
+    out: str = relFile + relRank
     if out in SQUARES:
 
         return out
 
-    pass
+    return None
 
 
 def getOtherColor(c: Literal["w", "b"]) -> Literal["w", "b"]:
@@ -403,7 +377,7 @@ def getOtherColor(c: Literal["w", "b"]) -> Literal["w", "b"]:
     return "w"
 
 
-def getLineFrom(color: Literal["w", "b"], loc: squareType, rankIncrement: int, fileIncrement: int) -> List[squareType]:
+def getLineFrom(color: Literal["w", "b"], loc: str, rankIncrement: int, fileIncrement: int) -> List[str]:
     """Returns an incremental line from specified location.
 
     Args:
@@ -427,41 +401,42 @@ def getLineFrom(color: Literal["w", "b"], loc: squareType, rankIncrement: int, f
     From c3, we can set a rank and file increment of -1 to get ['b2', 'a1']
 
     """
-    out: list[squareType] = [
-        getRelativeLoc(color, loc, addRank=(i + 1) * rankIncrement, addFile=(i + 1) * fileIncrement)
-        for i in range(7)
-        if getRelativeLoc(color, loc, addRank=(i + 1) * rankIncrement, addFile=(i + 1) * fileIncrement) in SQUARES
-    ]
+    out = []
+    for i in range(7):
+        val = getRelativeLoc(color, loc, addRank=(i + 1) * rankIncrement, addFile=(i + 1) * fileIncrement)
+        if val is None:
+            break
+        out.append(val)
     return out
 
 
-def getKnightAttackSquares(loc: squareType) -> List[squareType]:
+def getKnightAttackSquares(loc: str) -> List[str]:
     "Returns all the squares that are one knight-jump away from loc"
-    out: list[squareType] = [
-        getRelativeLoc("w", loc, r * rankMult, f * fileMult)
-        for r, f in zip([1, 2], [2, 1])
-        for rankMult in [-1, 1]
-        for fileMult in [-1, 1]
-        if getRelativeLoc("w", loc, r * rankMult, f * fileMult) in SQUARES
-    ]
+    out = []
+    for r, f in zip([1, 2], [2, 1]):
+        for rankMult in [-1, 1]:
+            for fileMult in [-1, 1]:
+                val = getRelativeLoc("w", loc, r * rankMult, f * fileMult)
+                if val is not None:
+                    out.append(val)
     return out
 
 
 class attackableSquares(TypedDict):
-    straights: list[list[squareType]]
-    diagonals: list[list[squareType]]
-    knights: list[squareType]
-    wP: list[squareType]
-    bP: list[squareType]
-    kings: list[squareType]
+    straights: list[list[str]]
+    diagonals: list[list[str]]
+    knights: list[str]
+    wP: list[str]
+    bP: list[str]
+    kings: list[str]
 
 
-squareDictType = dict[squareType, attackableSquares]
+# squareDictType = dict[str, attackableSquares]
 
 
-def getSquareDict() -> squareDictType:
+def getSquareDict() -> dict[str, attackableSquares]:
     """Get a dict of all the attack squares from every square, based on piece on that square."""
-    squareDict: squareDictType = {}
+    squareDict: dict[str, attackableSquares] = {}
     for square in SQUARES:
         straights = [
             getLineFrom(
@@ -505,7 +480,7 @@ SQUAREDICT = getSquareDict()
 
 
 # %% More complex functions
-def isInCheck(board: boardDict, color: Literal["w", "b"]) -> bool:
+def isInCheck(board: dict[str, empty | piece], color: Literal["w", "b"]) -> bool:
     """Given a board layout, returns if specified color is in check
 
     Args:
@@ -574,7 +549,9 @@ def isInCheck(board: boardDict, color: Literal["w", "b"]) -> bool:
     return False
 
 
-def getPotentialValidMoves(board: boardDict, currSquare: squareType, prevMoves: List[moveDict]) -> List[moveDict]:
+def getPotentialValidMoves(
+    board: dict[str, empty | piece], currSquare: str, prevMoves: List[moveDict]
+) -> List[moveDict]:
     """Returns all moves for a piece REGARDLESS of if they leave the moving color in check
 
     Args:
@@ -820,8 +797,8 @@ def getNewBoard(board: dict, move: dict) -> dict:
 
 
 def getValidMoves(
-    board: boardDict, color: Literal["w", "b"], prevMoves: List[moveDict]
-) -> Tuple[list[moveDict], dict[str, boardDict]]:
+    board: dict[str, empty | piece], color: Literal["w", "b"], prevMoves: List[moveDict]
+) -> Tuple[list[moveDict], dict[str, dict[str, empty | piece]]]:
     """Gets all valid moves for a specific color. If list length = 0, checkmate!
 
     Args:
@@ -866,14 +843,12 @@ def getValidMoves(
 
 
 # %% Score board
-def getBoardValue(board: boardDict, color: Literal["w", "b"]) -> int:
-    """Returns a score of the board for the specified color. Higher is better.
+def getBoardValue(board: dict[str, empty | piece]) -> int:
+    """Returns a score of the board from white's perspective. Positive is good for white, negative is good for black.
 
     Args:
 
         board (dict) -- keys are squares, values are pieces
-
-        color (str) -- w or b
 
     Returns:
 
@@ -881,11 +856,10 @@ def getBoardValue(board: boardDict, color: Literal["w", "b"]) -> int:
     """
 
     boardValue = 0
-    for square in board:
-        piece = board[square]
+    for _, piece in board.items():
         if isinstance(piece, empty):
             continue
-        if piece.color == color:
+        if piece.color == "w":
             boardValue += piece.value
         else:
             boardValue -= piece.value
@@ -894,7 +868,7 @@ def getBoardValue(board: boardDict, color: Literal["w", "b"]) -> int:
 
 
 def getMoveScore(
-    board: boardDict,
+    board: dict[str, empty | piece],
     originalToMove: Literal["w", "b"],
     toMove: Literal["w", "b"],
     prevMoves: list[moveDict],
@@ -928,7 +902,9 @@ def getMoveScore(
 
 
 # @log.timeFuncInfo
-def getScore(board: boardDict, toMove: Literal["w", "b"], prevMoves: list[moveDict]) -> tuple[pd.DataFrame, int]:
+def getScore(
+    board: dict[str, empty | piece], toMove: Literal["w", "b"], prevMoves: list[moveDict]
+) -> tuple[pd.DataFrame, int]:
     """Gets score of a board. Returns everything where the perspective of 'toMove' is positive.
 
     E.g.:
@@ -962,7 +938,7 @@ def getScore(board: boardDict, toMove: Literal["w", "b"], prevMoves: list[moveDi
     #             scores[col] = 10
     #         return scores, 1000
 
-    # attackDict: dict[squareType, attackDictContents] = defaultdict(
+    # attackDict: dict[str, attackDictContents] = defaultdict(
     #     lambda: {"w": [], "b": [], "value": 0, "pieceColor": None}
     # )
     # pieceValuesOnBoard = {"w": 0, "b": 0}
@@ -1036,7 +1012,7 @@ class chessGame(object):
 
     def __init__(self):
         # Create chess board, load up pieces
-        self.board: boardDict = {}
+        self.board: dict[str, empty | piece] = {}
         for f in FILES:
             for r in RANKS:
                 self.board[f + r] = empty()
