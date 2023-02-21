@@ -31,8 +31,8 @@ configs: list[ConfigType] = [
     {"name": "Average feedback", "min": 30, "max": 90, "pace": 1},
     {"name": "Good feedback", "min": 45, "max": 90, "pace": 1},
     {"name": "Great feedback", "min": 60, "max": 90, "pace": 1},
-    {"name": "Counterproductive feedback", "min": -30, "max": 60, "pace": 1},
-    {"name": "Counterproductive feedback, 4x pace", "min": -30, "max": 60, "pace": 4},
+    {"name": "Bad feedback", "min": -30, "max": 60, "pace": 1},
+    {"name": "Bad feedback, 4x pace", "min": -30, "max": 60, "pace": 4},
     {"name": "No feedback, 1.5x pace", "min": 0, "max": 90, "pace": 1.5},
 ]
 # Output can be 100% productive
@@ -70,7 +70,13 @@ fig = px.scatter(out, x="sideways", y="progress", facet_col="name", color="i", w
 
 fig.update_traces(marker_opacity=0.05, marker_size=1, showlegend=False)
 fig.update_coloraxes(showscale=False)
-fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1], font_size=12))
+fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1], font_size=15))
+
+fig.update_layout(
+    xaxis_title="Unproductive work",
+    yaxis_title="Productive work",
+    margin=dict(l=15, r=15, t=35, b=15),
+)
 fig.show()
 
 fig.write_image(
